@@ -17,10 +17,10 @@ Private Sub Worksheet_Change(ByVal Target As Range)
     Application.EnableEvents = False ' ปิด Event เพื่อป้องกัน Code รันซ้อนกันเอง
     Call SetSheetProtection(Me, False) ' ปลดล็อก Sheet ชั่วคราว
 
-    Dim provName1 As String: provName1 = Trim$(CStr(Me.Range("H28").Value)) '<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<
-    Dim ampName1 As String: ampName1 = Trim$(CStr(Me.Range("J28").Value)) '<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<
-    Dim provName2 As String: provName2 = Trim$(CStr(Me.Range("H51").Value)) '<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<
-    Dim ampName2 As String: ampName2 = Trim$(CStr(Me.Range("J51").Value)) '<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<
+    Dim provName1 As String:provName1 = Trim$(CStr(Me.Range("H28").Value))'<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<
+    Dim ampName1 As String :ampName1 = Trim$(CStr(Me.Range("J28").Value))'<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<
+    Dim provName2 As String:provName2 = Trim$(CStr(Me.Range("H51").Value))'<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<
+    Dim ampName2 As String :ampName2 = Trim$(CStr(Me.Range("J51").Value))'<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<
 
     ' ---------- (A1) กรณีเปลี่ยน "จังหวัด" เอาประกัน(H28) ----------
     If Not Intersect(Target, Me.Range("H28")) Is Nothing Then
@@ -34,7 +34,20 @@ Private Sub Worksheet_Change(ByVal Target As Range)
         ' 2. อัปเดตรายชื่อ "อำเภอ" ลงในฐานข้อมูล (คอลัมน์ Z ใน CF_อยู่ดีมีสุข)
         ' และล้างค่าอำเภอ/ตำบลเดิมที่หน้าจอออกเพื่อให้เลือกใหม่
         Me.Range("J28,L28").ClearContents
+
         Call UpdateLocationList1("Amphoe", provName1)
+
+        If len(Trim(Me.Range("G26").Text)) = 0 Then
+            Me.Range("G26").Value = "     บ้านเลขที่.....หมู่ที่....อาคาร/หมู่บ้าน..... ซอย.... ถนน...."
+            Me.Range("G26").Font.Color = RGB(166, 166, 166)
+        End If
+
+        If len(Trim(Me.Range("G49").Text)) = 0 Then
+            Me.Range("G49").Value = "     บ้านเลขที่.....หมู่ที่....อาคาร/หมู่บ้าน..... ซอย.... ถนน...."
+            Me.Range("G49").Font.Color = RGB(166, 166, 166)
+        End If
+        Me.Range("G26,G49").Font.Color = RGB(0, 0, 0)
+
         
     End If
 
@@ -93,13 +106,6 @@ Private Sub Worksheet_Change(ByVal Target As Range)
             Me.Range("G43").ClearContents
         End If
         
-    End If
-
-    If Not Intersect(Target, Me.Range("H28")) Is Nothing Then 'เมื่อกรอกชื่อจังหวัด
-        If Len(Trim(Me.Range("G49").Text)) = 0 Then
-            Me.Range("G49").Value = "     บ้านเลขที่.....หมู่ที่....อาคาร/หมู่บ้าน..... ซอย.... ถนน...."
-            Me.Range("G49").Font.Color = RGB(166, 166, 166)
-        End If
     End If
 
         ' ล็อกชีทคืน

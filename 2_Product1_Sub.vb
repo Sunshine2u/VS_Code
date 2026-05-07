@@ -150,8 +150,8 @@ Public Sub อยู่ดีมีสุข_Get_Quotation()
     Dim wsKey As Worksheet
     Dim wsQTR As Worksheet
     Dim wsCF As Worksheet '<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<
-    Set wsKey = Worksheets("QT_อยู่ดีมีสุข") '<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<
-    Set wsQTR = Worksheets("QTR_อยู่ดีมีสุข") '<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<
+    Set wsKey = Worksheets("QT_อยู่ดีมีสุข")'<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<
+    Set wsQTR = Worksheets("QTR_อยู่ดีมีสุข")'<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<
     Set wsCF = Worksheets("CF_อยู่ดีมีสุข") '<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<
 
     ' 1. ตรวจสอบเงื่อนไขจังหวัดน้ำท่วมก่อน
@@ -262,6 +262,14 @@ Public Sub CheckAndSuggestPremium(ByVal totalVal As Double)
     Call SetSheetProtection(QTSheet, SheetLockSetting)
 End Sub
 
+' ############################################################################################################
+' Sub สำหรับจัดการชีทและเขียนลิสต์อำเภอ,ตำบล (Action)
+' ############################################################################################################
+Public Sub UpdateLocationList1(ByVal Mode As String, ByVal Prov As String, Optional ByVal Amp As String = "")
+    Dim wsTarget As Worksheet
+    Dim arrResults As Variant
+    Dim targetCol As String, colAmphoe As String, colTambon As String
+    Dim targetLastRow As Long
 ' ############################################################################################################
 ' Sub สำหรับจัดการชีทและเขียนลิสต์อำเภอ,ตำบล (Action)
 ' ############################################################################################################
