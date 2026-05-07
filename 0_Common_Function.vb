@@ -1,3 +1,55 @@
+' ############################################################################################################
+' ส่วนที่ 1: Function สำหรับประมวลผลและกรองข้อมูลออกมาเป็น Array (Logic)
+' ############################################################################################################
+Public Function GetFilteredLocationArray(ByVal Mode As String, ByVal Prov As String, Optional ByVal Amp As String = "") As Variant
+    Dim wsCommon As Worksheet
+    Dim rawData As Variant
+    Dim resultData() As String
+    Dim lastRow As Long, i As Long, count As Long
+    
+    Set wsCommon = ThisWorkbook.Worksheets("CF_Common") '<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<
+    
+    ' 1. หาบรรทัดสุดท้ายและดึงข้อมูลเข้า Array (C=จังหวัด, D=อำเภอ, E=ตำบล)
+    lastRow = wsCommon.Cells(wsCommon.Rows.count, "C").End(xlUp).Row
+    If lastRow < 2 Then
+        GetFilteredLocationArray = Empty
+        Exit Function
+    End If
+    
+    rawData = wsCommon.Range("C2:E" & lastRow).Value
+    ReDim resultData(1 To UBound(rawData, 1), 1 To 1)
+    count = 0
+    
+    ' 2. วนลูปกรองข้อมูลตามเงื่อนไข
+    For i = 1 To UBound(rawData, 1)
+        If Mode = "Amphoe" Then
+            ' กรองอำเภอ (คอลัมน์ที่ 2 ของ Array)
+            If CStr(rawData(i, 1)) = Prov And rawData(i, 2) <> "" Then
+                If Not IsInArray(CStr(rawData(i, 2)), resultData, count) Then
+                    count = count + 1
+                    resultData(count, 1) = rawData(i, 2)
+                End If
+            End If
+        ElseIf Mode = "Tambon" Then
+            ' กรองตำบล (คอลัมน์ที่ 3 ของ Array)
+            If CStr(rawData(i, 1)) = Prov And CStr(rawData(i, 2)) = Amp And rawData(i, 3) <> "" Then
+                If Not IsInArray(CStr(rawData(i, 3)), resultData, count) Then
+                    count = count + 1
+                    resultData(count, 1) = rawData(i, 3)
+                End If
+            End If
+        End If
+    Next i
+    
+    ' 3. ส่งค่ากลับเป็น Array หากพบข้อมูล
+    If count > 0 Then
+        GetFilteredLocationArray = resultData
+    Else
+        GetFilteredLocationArray = Empty
+    End If
+End Function
+
+
 ' ======================================================================================
 ' GetPackageValidation: ฟังก์ชันคำนวณหน้างาน (เรียกใช้ภายใน)
 ' รับค่า: ทุนประกัน (Double) และ ช่วงเซลล์ตารางอ้างอิง (Range)
@@ -234,4 +286,6 @@ Public Sub ResetExcelEvents()
     Application.EnableEvents = True
     Application.Calculation = xlCalculationAutomatic
 End Sub
+
+
 
