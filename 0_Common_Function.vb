@@ -30,19 +30,19 @@ Public Function GetPackageValidation(ByVal totalVal As Double, ByVal tableRef As
     
     If Not IsError(matchIdx) Then
         ' พบแผนที่ตรงเป๊ะ
-        result(1) = "Valid" 
+        result(1) = "Valid"
     Else
         ' ไม่ตรงแผนเป๊ะ -> เริ่มกระบวนการหาแผนใกล้เคียง (Suggestion)
-        result(1) = "Invalid" 
+        result(1) = "Invalid"
         On Error Resume Next
         ' หาแผนที่ทุนน้อยกว่าที่ใกล้ที่สุด
         result(2) = Application.WorksheetFunction.Lookup(totalVal, tableRef)
         ' หาแผนที่ทุนมากกว่าที่ใกล้ที่สุด
         matchIdx = Application.Match(totalVal, tableRef, 1)
-        If Not IsError(matchIdx) And matchIdx < tableRef.Rows.Count Then
+        If Not IsError(matchIdx) And matchIdx < tableRef.Rows.count Then
             result(3) = tableRef.Cells(matchIdx + 1, 1).Value
         Else
-            result(3) = result(2) 
+            result(3) = result(2)
         End If
         On Error GoTo 0
     End If
@@ -80,7 +80,11 @@ Public Function IsPremiumValid(ByVal InputVal As Double, ByVal tableRef As Range
     End Select
 End Function
 
+' ======================================================================================
 ' Function ค้นหาตำแหน่งคอลัมน์ (Index) จากข้อความหัวตาราง
+' รับค่า: ชื่อแผ่นงาน, แถวหัวตาราง, ข้อความหัวตารางที่ต้องการค้นหา
+' คืนค่า: เลขคอลัมน์ที่พบ (Long) หรือ 0 ถ้าไม่พบ
+' ======================================================================================
 Public Function FindHeaderColumn(sheetName As String, headerRow As Long, headerText As String) As Long
     Dim ws As Worksheet, c As Range, lastCol As Long
     Set ws = ThisWorkbook.Worksheets(sheetName)
@@ -101,52 +105,65 @@ Public Function FindHeaderColumn(sheetName As String, headerRow As Long, headerT
     FindHeaderColumn = 0
 End Function
 
-' Function ดึงข้อมูลทั้งหมดในคอลัมน์นั้นๆ มาเก็บไว้ใน Array (แบบ 2 มิติ)
-Public Function GetList(sheetName As String, headerRow As Long, headerText As String) As Variant
+' ======================================================================================
+' Function ดึงข้อมูลจากคอลัมน์มาเป็น Range (เพื่อนำไปใช้ต่อใน Match)
+' รับค่า: ชื่อแผ่นงาน, แถวหัวตาราง, ข้อความหัวตารางที่ต้องการค้นหา
+' ======================================================================================
+Public Function GetListRange(ByVal sheetName As String, ByVal headerRow As Long, ByVal headerText As String) As Range
     Dim ws As Worksheet, colIndex As Long, lastRow As Long
-    Set ws = ThisWorkbook.Worksheets(sheetName)
     
-    ' หาตำแหน่งคอลัมน์ก่อน
+    On Error Resume Next
+    Set ws = ThisWorkbook.Worksheets(sheetName)
+    On Error GoTo 0
+    
+    If ws Is Nothing Then Exit Function
+    
+    ' หาเลขคอลัมน์
     colIndex = FindHeaderColumn(sheetName, headerRow, headerText)
     
-    ' หากไม่พบคอลัมน์ที่ต้องการ ให้คืนค่าเป็น Array ว่าง
-    If colIndex = 0 Then GetList = Array(): Exit Function
-    
-    ' หาแถวสุดท้ายที่มีข้อมูลในคอลัมน์นั้น
-    lastRow = ws.Cells(ws.Rows.count, colIndex).End(xlUp).Row
-    
-    ' ตรวจสอบว่ามีข้อมูลอยู่ใต้หัวตารางหรือไม่
-    If lastRow <= headerRow Then GetList = Array(): Exit Function
-
-    ' ดึงข้อมูลทั้งช่วง (Range) เข้าสู่ตัวแปร Variant ทีเดียว (เร็วกว่าวนลูปเก็บทีละเซลล์)
-    GetList = ws.Range(ws.Cells(headerRow + 1, colIndex), ws.Cells(lastRow, colIndex)).Value
+    If colIndex > 0 Then
+        lastRow = ws.Cells(ws.Rows.count, colIndex).End(xlUp).Row
+        ' ส่งค่ากลับเป็นวัตถุ Range (เพื่อให้ Match ทำงานได้แม่นยำกว่า Array 2 มิติ)
+        If lastRow > headerRow Then
+            Set GetListRange = ws.Range(ws.Cells(headerRow + 1, colIndex), ws.Cells(lastRow, colIndex))
+        End If
+    End If
 End Function
 
-' Function ตรวจสอบว่าจังหวัดที่ระบุ อยู่ในพื้นที่เสี่ยงภัย (ยกเว้นความคุ้มครองน้ำท่วม) หรือไม่
+' ======================================================================================
+' Function ตรวจสอบพื้นที่เสี่ยง (ตัวที่ Sub ภายนอกจะเรียกใช้)
+' รับค่า: ชื่อจังหวัด (String)
+' ======================================================================================
 Public Function IsFloodRisk(ByVal provinceName As String) As Boolean
-    Dim list As Variant, result As Variant
+    Dim riskRange As Range
+    Dim result As Variant
     Dim cleanProv As String: cleanProv = Trim$(CStr(provinceName))
     
-    ' หากไม่ระบุชื่อจังหวัด ให้ถือว่าไม่เสี่ยงภัย
+    ' หากไม่ระบุชื่อจังหวัด ให้ถือว่าไม่เสี่ยง
     If cleanProv = "" Then IsFloodRisk = False: Exit Function
     
-    ' ดึงรายชื่อจังหวัดยกเว้นน้ำท่วมจากแผ่นงานฐานข้อมูล (CF_อยู่ดีมีสุข)
-    list = GetList("CF_อยู่ดีมีสุข", 1, "จังหวัดยกเว้นน้ำท่วม")
+    ' ขั้นตอนที่ 1: ดึง Range รายชื่อจังหวัดเสี่ยงภัยมาจากฐานข้อมูล
+    ' ปรับ "CF_อยู่ดีมีสุข", 1, "จังหวัดยกเว้นน้ำท่วม" ให้ตรงตามหน้างานจริง
+    Set riskRange = GetListRange("CF_Common", 1, "จังหวัดยกเว้นน้ำท่วม1")
     
-    ' ตรวจสอบว่าผลลัพธ์เป็น Array หรือไม่
-    If IsArray(list) Then
-        ' ใช้ฟังก์ชัน Match ในการค้นหาจังหวัดในรายการ
-        result = Application.Match(cleanProv, list, 0)
-        ' หากหาเจอ (ไม่เป็น Error) แสดงว่าเป็นจังหวัดพื้นที่เสี่ยง
-        If Not IsError(result) Then IsFloodRisk = True: Exit Function
+    ' ขั้นตอนที่ 2: ตรวจสอบความปลอดภัย (หากไม่พบตารางรายชื่อ ให้ผ่านไปก่อน)
+    If riskRange Is Nothing Then
+        IsFloodRisk = False
+        Exit Function
     End If
     
-    ' หากไม่พบในรายการพื้นที่เสี่ยง
-    IsFloodRisk = False
+    ' ขั้นตอนที่ 3: ใช้ Match ค้นหาชื่อจังหวัดใน Range ที่ดึงมา
+    result = Application.Match(cleanProv, riskRange, 0)
+    
+    ' ขั้นตอนที่ 4: สรุปผล (ถ้าเจอเลขลำดับ = เสี่ยงภัย)
+    IsFloodRisk = Not IsError(result)
 End Function
 
-' ฟังก์ชัน IsInArray (ใช้ตัวเดิม)
-Private Function IsInArray(ByVal val As String, ByRef arr() As String, ByVal currentCount As Long) As Boolean
+' ======================================================================================
+' ฟังก์ชัน IsInArray (ตรวจสอบว่าค่าที่กำหนดอยู่ใน Array หรือไม่)
+' ใช้สำหรับตรวจสอบข้อมูลที่ดึงมาจากตารางฐานข้อมูล (เช่น รายชื่อจังหวัดเสี่ยงภัย)
+' ======================================================================================
+Public Function IsInArray(ByVal val As String, ByRef arr() As String, ByVal currentCount As Long) As Boolean
     Dim j As Long
     If currentCount = 0 Then IsInArray = False: Exit Function
     For j = 1 To currentCount
@@ -175,9 +192,46 @@ Public Sub SetSheetProtection(ByVal targetSheet As Worksheet, ByVal IsLock As Bo
                             DrawingObjects:=True, _
                             Contents:=True, _
                             Scenarios:=True
+        ThisWorkbook.Protect Password:=myPassword, Structure:=True, Windows:=False
     Else
         ' ---- กรณีสั่งให้ "ปลดล็อก" (Unprotect) ----
         targetSheet.Unprotect Password:=myPassword
+        ThisWorkbook.Unprotect Password:=myPassword
     End If
     
 End Sub
+
+Public Sub SetWorkbookProtection(ByVal IsLock As Boolean)
+    
+     If IsLock Then
+        ' ---- กรณีสั่งให้ "ล็อก" (Protect) ----
+        ThisWorkbook.Protect Password:=myPassword, Structure:=True, Windows:=False
+    Else
+        ' ---- กรณีสั่งให้ "ปลดล็อก" (Unprotect) ----
+        ThisWorkbook.Unprotect Password:=myPassword
+    End If
+    
+End Sub
+
+
+' ======================================================================================
+' UnlockAllSheets: ฟังก์ชันสำหรับปลดล็อกทุกแผ่นงานใน Workbook (ใช้ในกรณีฉุกเฉิน)
+' เหมาะสำหรับสถานการณ์ที่คุณลืมรหัสผ่านหรือมีปัญหากับการล็อกแผ่นงาน
+' =======================================================================================
+Public Sub UnlockAllSheets()
+    Dim ws As Worksheet
+    For Each ws In ThisWorkbook.Worksheets
+        ws.Unprotect Password:=myPassword
+    Next ws
+    ThisWorkbook.Unprotect Password:=myPassword
+End Sub
+
+' ======================================================================================
+' ---------- Sub Routine สำหรับรีเซ็ตระบบด้วยตนเอง ----------
+' เหมาะสำหรับสถานการณ์ที่ระบบ Event หรือ Calculation มีปัญหา เช่น ค้าง, ไม่ตอบสนอง, หรือเกิดข้อผิดพลาดที่ทำให้ Excel อยู่ในสถานะไม่ปกติ
+' =======================================================================================
+Public Sub ResetExcelEvents()
+    Application.EnableEvents = True
+    Application.Calculation = xlCalculationAutomatic
+End Sub
+

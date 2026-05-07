@@ -1,51 +1,143 @@
-' ======================================================================================
-' GetPackageValidation: ฟังก์ชันคำนวณหน้างาน (เรียกใช้ภายใน)
-' รับค่า: ทุนประกัน (Double) และ ช่วงเซลล์ตารางอ้างอิง (Range)
-' คืนค่า: Array 5 ช่อง [สถานะ, ค่าต่ำกว่า, ค่าสูงกว่า, ต่ำสุด, สูงสุด]
-' ======================================================================================
-Public Function GetPackageValidation(ByVal totalVal As Double, ByVal tableRef As Range) As Variant
-    Dim result(1 To 5) As Variant
-    Dim matchIdx As Variant
-    
-    ' STEP 1: ตรวจสอบความปลอดภัย (หากส่ง Range มาว่างเปล่าให้เด้งออก)
-    If tableRef Is Nothing Then
-        result(1) = "Error: No Table Reference"
-        GetPackageValidation = result
-        Exit Function
-    End If
-    
-    ' STEP 2: คำนวณขอบเขตล่าง-บนของตารางจริง (Dynamic Min-Max)
-    result(4) = Application.WorksheetFunction.Min(tableRef)
-    result(5) = Application.WorksheetFunction.Max(tableRef)
+' ############################################################################################################
+' ส่วนที่ 1: Worksheet Event (สำหรับชีท QT_อยู่ดีมีสุข)
+' ############################################################################################################
 
-    ' STEP 3: ตรวจสอบว่าทุน "หลุดช่วง" ที่รับประกันหรือไม่
-    If totalVal < result(4) Or totalVal > result(5) Then
-        result(1) = "OutOfRange"
-        GetPackageValidation = result
-        Exit Function
-    End If
+Private Sub Worksheet_Change(ByVal Target As Range)
+    ' STEP 1: ตรวจสอบขอบเขตเซลล์ที่ต้องการดักจับ (จังหวัด H28, อำเภอ J28, ทุนประกัน G41-G42)
+    If Intersect(Target, Me.Range("H28,J28,G41:H41,G42:H42")) Is Nothing Then Exit Sub
 
-    ' STEP 4: ตรวจสอบแบบตรงตัว (Exact Match)
-    matchIdx = Application.Match(totalVal, tableRef, 0)
+    On Error GoTo ErrorHandler
     
-    If Not IsError(matchIdx) Then
-        ' พบแผนที่ตรงเป๊ะ
-        result(1) = "Valid" 
-    Else
-        ' ไม่ตรงแผนเป๊ะ -> เริ่มกระบวนการหาแผนใกล้เคียง (Suggestion)
-        result(1) = "Invalid" 
-        On Error Resume Next
-        ' หาแผนที่ทุนน้อยกว่าที่ใกล้ที่สุด
-        result(2) = Application.WorksheetFunction.Lookup(totalVal, tableRef)
-        ' หาแผนที่ทุนมากกว่าที่ใกล้ที่สุด
-        matchIdx = Application.Match(totalVal, tableRef, 1)
-        If Not IsError(matchIdx) And matchIdx < tableRef.Rows.Count Then
-            result(3) = tableRef.Cells(matchIdx + 1, 1).Value
-        Else
-            result(3) = result(2) 
+    ' STEP 2: เตรียมระบบก่อนเริ่มทำงาน
+    Application.EnableEvents = False ' ปิด Event เพื่อป้องกัน Code รันซ้อนกันเอง
+    Call SetSheetProtection(Me, False) ' ปลดล็อก Sheet ชั่วคราว
+
+    Dim provName As String: provName = Trim$(CStr(Me.Range("H28").Value))
+    Dim ampName As String: ampName = Trim$(CStr(Me.Range("J28").Value))
+
+    ' ---------- (A) กรณีเปลี่ยน "จังหวัด" (H28) ----------
+    If Not Intersect(Target, Me.Range("H28")) Is Nothing Then
+        
+        ' 1. ตรวจสอบพื้นที่เสี่ยงภัยน้ำท่วม
+        Dim riskList As Variant: riskList = GetListRange("CF_Common", 1, "จังหวัดยกเว้นน้ำท่วม1")
+        If Not IsError(Application.Match(provName, riskList, 0)) Then
+            MsgBox "พบว่าจังหวัด " & provName & " เป็นพื้นที่เสี่ยงภัยน้ำท่วม" & vbCrLf & _
+                   "โปรดติดต่อเจ้าหน้าที่ MTI ผู้ดูแลตัวแทน ในการออกใบเสนอราคา", vbExclamation, "แจ้งเตือนความเสี่ยง"
         End If
-        On Error GoTo 0
+
+        ' 2. อัปเดตรายชื่อ "อำเภอ" ลงในฐานข้อมูล (คอลัมน์ Z ใน CF_อยู่ดีมีสุข)
+        ' และล้างค่าอำเภอ/ตำบลเดิมที่หน้าจอออกเพื่อให้เลือกใหม่
+        Me.Range("J28,L28").ClearContents
+        Call UpdateLocationList("Amphoe", provName)
+        
     End If
+
+    ' ---------- (B) กรณีเปลี่ยน "อำเภอ" (J28) ----------
+    If Not Intersect(Target, Me.Range("J28")) Is Nothing Then
+        
+        ' 1. ตรวจสอบว่ามีการเลือกจังหวัดไว้ก่อนหรือไม่
+        If provName <> "" And ampName <> "" Then
+            ' 2. อัปเดตรายชื่อ "ตำบล" ลงในฐานข้อมูล (คอลัมน์ AA ใน CF_อยู่ดีมีสุข)
+            ' และล้างค่าตำบลเดิมที่หน้าจอ (L28) ออก
+            Me.Range("L28").ClearContents
+            Call UpdateLocationList("Tambon", provName, ampName)
+        End If
+        
+    End If
+
+    ' ---------- (C) กรณีเปลี่ยน "ทุนประกัน" (G41, G42) ----------
+    If Not Intersect(Target, Me.Range("G41,G42")) Is Nothing Then
+        
+        ' 1. ตรวจสอบช่องเฟอร์นิเจอร์ (G42)
+        If Len(Trim(Me.Range("G42").Text)) = 0 Then
+            Me.Range("J42").Value = "ถ้าไม่มีให้กรอกเลข 0"
+            Me.Range("J42").Font.Color = RGB(255, 0, 0)
+        Else
+            Me.Range("J42").ClearContents
+        End If
+        
+        ' 2. คำนวณทุนรวม (G43) และแสดงคำแนะนำ Package (J43)
+        If IsNumeric(Me.Range("G41").Value) And IsNumeric(Me.Range("G42").Value) Then
+            Me.Range("G43").Value = Me.Range("G41").Value + Me.Range("G42").Value
+            Call CheckAndSuggestPremium(Me.Range("G43").Value)
+        Else
+            Me.Range("G43").ClearContents
+            Me.Range("J43:L43").ClearContents
+        End If
+        
+    End If
+
+    ' STEP 3: จบการทำงานและคืนค่าระบบ
+    Call SetSheetProtection(Me, FileLockSetting)
+    Application.EnableEvents = True
+    Exit Sub
+
+ErrorHandler:
+    MsgBox "เกิดข้อผิดพลาด: " & Err.Description, vbCritical, "System Error"
+    Call SetSheetProtection(Me, FileLockSetting)
+    Application.EnableEvents = True
+End Sub
+
+' ############################################################################################################
+' ส่วนที่ 2: ฟังก์ชันสำหรับอัปเดตรายการ Dropdown (UpdateLocationList)
+' ############################################################################################################
+
+Public Sub UpdateLocationList(ByVal Mode As String, ByVal Prov As String, Optional ByVal Amp As String = "")
+    Dim ws As Worksheet: Set ws = ThisWorkbook.Worksheets("CF_อยู่ดีมีสุข")
+    Dim targetCol As String
+    Dim rawData As Variant
+    Dim resultData() As String
+    Dim i As Long, count As Long, lastRow As Long
     
-    GetPackageValidation = result
-End Function
+    ' STEP 1: กำหนดเป้าหมาย (Mode "Amphoe" -> คอลัมน์ Z, Mode "Tambon" -> คอลัมน์ AA)
+    targetCol = IIf(Mode = "Amphoe", "Z", "AA")
+    Application.ScreenUpdating = False
+    ws.Unprotect Password:=myPassword
+
+    ' STEP 2: ล้างข้อมูลเก่าในคอลัมน์เป้าหมาย
+    Dim targetLastRow As Long: targetLastRow = ws.Cells(ws.Rows.count, targetCol).End(xlUp).Row
+    If targetLastRow >= 2 Then
+        ws.Range(ws.Cells(2, targetCol), ws.Cells(targetLastRow, targetCol)).ClearContents
+    End If
+
+    ' พิเศษ: ถ้าเลือกจังหวัดใหม่ ต้องล้างตำบล (AA) ทิ้งด้วยเสมอ
+    If Mode = "Amphoe" Then
+        Dim lastRowAA As Long: lastRowAA = ws.Cells(ws.Rows.count, "AA").End(xlUp).Row
+        If lastRowAA >= 2 Then ws.Range("AA2:AA" & lastRowAA).ClearContents
+    End If
+
+    ' STEP 3: คัดกรองข้อมูลจาก Master Data (คอลัมน์ T, U, V)
+    lastRow = ws.Cells(ws.Rows.count, "T").End(xlUp).Row
+    If lastRow < 2 Then GoTo CleanUp
+    
+    rawData = ws.Range("T2:V" & lastRow).Value
+    ReDim resultData(1 To UBound(rawData, 1), 1 To 1)
+    count = 0
+
+    For i = 1 To UBound(rawData, 1)
+        If Mode = "Amphoe" Then
+            ' กรองเฉพาะอำเภอที่อยู่ในจังหวัดที่เลือก
+            If rawData(i, 1) = Prov And rawData(i, 2) <> "" Then
+                If Not IsInArray(CStr(rawData(i, 2)), resultData, count) Then
+                    count = count + 1: resultData(count, 1) = rawData(i, 2)
+                End If
+            End If
+        ElseIf Mode = "Tambon" Then
+            ' กรองเฉพาะตำบลที่อยู่ในจังหวัด และอำเภอที่เลือก
+            If rawData(i, 1) = Prov And rawData(i, 2) = Amp And rawData(i, 3) <> "" Then
+                If Not IsInArray(CStr(rawData(i, 3)), resultData, count) Then
+                    count = count + 1: resultData(count, 1) = rawData(i, 3)
+                End If
+            End If
+        End If
+    Next i
+
+    ' STEP 4: เขียนผลลัพธ์ลงในตาราง List เพื่อให้ Data Validation เรียกใช้
+    If count > 0 Then
+        ws.Cells(2, targetCol).Resize(count, 1).Value = resultData
+    End If
+
+CleanUp:
+    ws.Protect Password:=myPassword
+    Application.ScreenUpdating = True
+End Sub
