@@ -1,4 +1,12 @@
-'==============================================
+' ############################################################################################################
+' Sub ที่ดักจับการเปลี่ยนแปลงข้อมูลในเซลล์ที่เกี่ยวข้องกับจังหวัด/อำเภอ และทุนประกันภัย แล้วเปลี่ยนแปลงข้อมูลใน Worksheet ตามเงื่อนไขที่กำหนดไว้
+' Worksheet_Change Event สำหรับหน้าจอออกใบเสนอราคา (Quotation)
+' โดยมีการตรวจสอบและจัดการข้อมูลที่เกี่ยวข้องกับจังหวัด/อำเภอ และทุนประกันภัย
+' โดยมีการแจ้งเตือนและแนะนำข้อมูลที่จำเป็นเพื่อให้การกรอกข้อมูลเป็นไปอย่างถูกต้องและครบถ้วน
+' #############################################################################################################
+
+
+'===================================================================
 ' (A) แจ้งเตือนจังหวัดกลุ่มเสี่ยงภัยน้ำท่วมที่ H28
 ' (B) ตรวจสอบทุนรวมที่ G43 ให้ตรงตามตาราง Premium Table แบบเป๊ะๆ
 '     - หากไม่ตรง จะแสดงทุนแนะนำที่ใกล้เคียงที่สุด (Floor/Ceiling) ที่ L43
@@ -9,7 +17,7 @@
 
 Private Sub Worksheet_Change(ByVal Target As Range)
     ' STEP 1: ตรวจสอบขอบเขตเซลล์ที่ต้องการดักจับ (จังหวัด H28, อำเภอ J28,จังหวัด H51, อำเภอ J51, ทุนประกัน G41-G42)
-    If Intersect(Target, Me.Range("H28,J28,H51,J51,G41:H41,G42:H42")) Is Nothing Then Exit Sub
+    If Intersect(Target, Me.Range("H28,J28,L28,H51,J51,L51,G41:H41,G42:H42,G26,G49")) Is Nothing Then Exit Sub
 
     On Error GoTo ErrorHandler
     
@@ -36,19 +44,6 @@ Private Sub Worksheet_Change(ByVal Target As Range)
         Me.Range("J28,L28").ClearContents
 
         Call UpdateLocationList1("Amphoe", provName1)
-
-        If len(Trim(Me.Range("G26").Text)) = 0 Then
-            Me.Range("G26").Value = "     บ้านเลขที่.....หมู่ที่....อาคาร/หมู่บ้าน..... ซอย.... ถนน...."
-            Me.Range("G26").Font.Color = RGB(166, 166, 166)
-        End If
-
-        If len(Trim(Me.Range("G49").Text)) = 0 Then
-            Me.Range("G49").Value = "     บ้านเลขที่.....หมู่ที่....อาคาร/หมู่บ้าน..... ซอย.... ถนน...."
-            Me.Range("G49").Font.Color = RGB(166, 166, 166)
-        End If
-        Me.Range("G26,G49").Font.Color = RGB(0, 0, 0)
-
-        
     End If
 
     ' ---------- (B1) กรณีเปลี่ยน "อำเภอ" (J28) ----------
@@ -101,11 +96,43 @@ Private Sub Worksheet_Change(ByVal Target As Range)
         If IsNumeric(Me.Range("G41").Value) And IsNumeric(Me.Range("G42").Value) Then
             ' รวมค่าอาคารและเฟอร์นิเจอร์
             Me.Range("G43").Value = Me.Range("G41").Value + Me.Range("G42").Value
+            'update CF_อยู่ดีมีสุข ด้วย
+            with Worksheets("CF_อยู่ดีมีสุข")
+                .Range("P12").Value = Me.Range("G41").Value 'ทุนอาคาร
+                .Range("P13").Value = Me.Range("G42").Value 'ทุนเฟอร์นิเจอร์
+            End With
             Call CheckAndSuggestPremium(Me.Range("G43").Value)
         Else
             Me.Range("G43").ClearContents
         End If
         
+    End If
+
+        ' ---------- (D) ตรวจสอบและแนะนำการเขียนที่อยู่ (G26, G49) ----------
+
+     If Not Intersect(Target, Me.Range("H28,J28,L28,H51,J51,L51,G26,G49")) Is Nothing Then
+        If len(Trim(Me.Range("G26").Text)) = 0 Then
+            Me.Range("G26").Value = "     บ้านเลขที่.....หมู่ที่....อาคาร/หมู่บ้าน..... ซอย.... ถนน...."
+            Me.Range("G26").Font.Color = RGB(166, 166, 166) 
+        Else
+            If Me.Range("G26").Value = "     บ้านเลขที่.....หมู่ที่....อาคาร/หมู่บ้าน..... ซอย.... ถนน...." Then
+                Me.Range("G26").Font.Color = RGB(166, 166, 166) 
+            Else 
+                Me.Range("G26").Font.Color = RGB(0, 0, 0)
+            End If
+        End If
+
+        If len(Trim(Me.Range("G49").Text)) = 0 Then
+            Me.Range("G49").Value = "     บ้านเลขที่.....หมู่ที่....อาคาร/หมู่บ้าน..... ซอย.... ถนน...."
+            Me.Range("G49").Font.Color = RGB(166, 166, 166)
+        Else
+            If Me.Range("G49").Value = "     บ้านเลขที่.....หมู่ที่....อาคาร/หมู่บ้าน..... ซอย.... ถนน...." Then
+                Me.Range("G49").Font.Color = RGB(166, 166, 166)
+            Else
+                Me.Range("G49").Font.Color = RGB(0, 0, 0)
+            End If
+        End If
+
     End If
 
         ' ล็อกชีทคืน
