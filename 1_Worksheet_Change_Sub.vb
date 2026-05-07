@@ -8,8 +8,8 @@
 
 
 Private Sub Worksheet_Change(ByVal Target As Range)
-    ' STEP 1: ตรวจสอบขอบเขตเซลล์ที่ต้องการดักจับ (จังหวัด H28, อำเภอ J28, ทุนประกัน G41-G42)
-    If Intersect(Target, Me.Range("H28,J28,G41:H41,G42:H42")) Is Nothing Then Exit Sub
+    ' STEP 1: ตรวจสอบขอบเขตเซลล์ที่ต้องการดักจับ (จังหวัด H28, อำเภอ J28,จังหวัด H51, อำเภอ J51, ทุนประกัน G41-G42)
+    If Intersect(Target, Me.Range("H28,J28,H51,J51,G41:H41,G42:H42")) Is Nothing Then Exit Sub
 
     On Error GoTo ErrorHandler
     
@@ -17,15 +17,16 @@ Private Sub Worksheet_Change(ByVal Target As Range)
     Application.EnableEvents = False ' ปิด Event เพื่อป้องกัน Code รันซ้อนกันเอง
     Call SetSheetProtection(Me, False) ' ปลดล็อก Sheet ชั่วคราว
 
-    Dim provName As String: provName = Trim$(CStr(Me.Range("H28").Value))
-    Dim ampName As String: ampName = Trim$(CStr(Me.Range("J28").Value))
+    Dim provName1 As String:provName1 = Trim$(CStr(Me.Range("H28").Value))'<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<
+    Dim ampName1 As String :ampName1 = Trim$(CStr(Me.Range("J28").Value))'<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<
+    Dim provName2 As String:provName2 = Trim$(CStr(Me.Range("H51").Value))'<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<
+    Dim ampName2 As String :ampName2 = Trim$(CStr(Me.Range("J51").Value))'<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<
 
-    ' ---------- (A) กรณีเปลี่ยน "จังหวัด" (H28) ----------
+    ' ---------- (A1) กรณีเปลี่ยน "จังหวัด" เอาประกัน(H28) ----------
     If Not Intersect(Target, Me.Range("H28")) Is Nothing Then
-        
         ' 1. ตรวจสอบพื้นที่เสี่ยงภัยน้ำท่วม
         Dim riskList As Variant: riskList = GetListRange("CF_Common", 1, "จังหวัดยกเว้นน้ำท่วม1")
-        If Not IsError(Application.Match(provName, riskList, 0)) Then
+        If Not IsError(Application.Match(provName1, riskList, 0)) Then
             MsgBox "พบว่าจังหวัด " & provName & " เป็นพื้นที่เสี่ยงภัยน้ำท่วม" & vbCrLf & _
                    "โปรดติดต่อเจ้าหน้าที่ MTI ผู้ดูแลตัวแทน ในการออกใบเสนอราคา", vbExclamation, "แจ้งเตือนความเสี่ยง"
         End If
@@ -33,19 +34,41 @@ Private Sub Worksheet_Change(ByVal Target As Range)
         ' 2. อัปเดตรายชื่อ "อำเภอ" ลงในฐานข้อมูล (คอลัมน์ Z ใน CF_อยู่ดีมีสุข)
         ' และล้างค่าอำเภอ/ตำบลเดิมที่หน้าจอออกเพื่อให้เลือกใหม่
         Me.Range("J28,L28").ClearContents
-        Call UpdateLocationList("Amphoe", provName)
+        Call UpdateLocationList1("Amphoe", provName1)
         
     End If
 
-    ' ---------- (B) กรณีเปลี่ยน "อำเภอ" (J28) ----------
+    ' ---------- (B1) กรณีเปลี่ยน "อำเภอ" (J28) ----------
     If Not Intersect(Target, Me.Range("J28")) Is Nothing Then
-        
+
         ' 1. ตรวจสอบว่ามีการเลือกจังหวัดไว้ก่อนหรือไม่
-        If provName <> "" And ampName <> "" Then
+        If provName1 <> "" And ampName1 <> "" Then
             ' 2. อัปเดตรายชื่อ "ตำบล" ลงในฐานข้อมูล (คอลัมน์ AA ใน CF_อยู่ดีมีสุข)
             ' และล้างค่าตำบลเดิมที่หน้าจอ (L28) ออก
             Me.Range("L28").ClearContents
-            Call UpdateLocationList("Tambon", provName, ampName)
+            Call UpdateLocationList1("Tambon", provName1, ampName1)
+        End If
+        
+    End If
+
+
+        ' ---------- (A2) กรณีเปลี่ยน "จังหวัด" เอาประกัน(H51) ----------
+    If Not Intersect(Target, Me.Range("H51")) Is Nothing Then
+        ' 2. อัปเดตรายชื่อ "อำเภอ" ลงในฐานข้อมูล (คอลัมน์  "W" ใน CF_อยู่ดีมีสุข)
+        ' และล้างค่าอำเภอ/ตำบลเดิมที่หน้าจอออกเพื่อให้เลือกใหม่
+        Me.Range("J51,L51:M51").ClearContents
+        Call UpdateLocationList2("Amphoe", provName2)
+        
+    End If
+
+    ' ---------- (B2) กรณีเปลี่ยน "อำเภอ" (J51) ----------
+    If Not Intersect(Target, Me.Range("J51")) Is Nothing Then
+        ' 1. ตรวจสอบว่ามีการเลือกจังหวัดไว้ก่อนหรือไม่
+        If provName2 <> "" And ampName2 <> "" Then
+            ' 2. อัปเดตรายชื่อ "ตำบล" ลงในฐานข้อมูล (คอลัมน์ AA ใน CF_อยู่ดีมีสุข)
+            ' และล้างค่าตำบลเดิมที่หน้าจอ (L51) ออก
+            Me.Range("L51:M51").ClearContents
+            Call UpdateLocationList2("Tambon", provName2, ampName2)
         End If
         
     End If
@@ -70,6 +93,13 @@ Private Sub Worksheet_Change(ByVal Target As Range)
             Me.Range("G43").ClearContents
         End If
         
+    End If
+
+    If Not Intersect(Target, Me.Range("H28")) Is Nothing Then 'เมื่อกรอกชื่อจังหวัด
+        If len(Trim(Me.Range("G49").Text)) = 0 Then
+            Me.Range("G49").Value = "     บ้านเลขที่.....หมู่ที่....อาคาร/หมู่บ้าน..... ซอย.... ถนน...."
+            Me.Range("G49").Font.Color = RGB(166, 166, 166)
+        End If
     End If
 
         ' ล็อกชีทคืน

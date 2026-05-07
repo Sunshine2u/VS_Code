@@ -29,8 +29,7 @@ Public Sub อยู่ดีมีสุข_Clear_Input()
         
         ' ล้างเฉพาะเนื้อหา (ClearContents) ในช่วงเซลล์ที่กำหนด (ไม่ลบ Format หรือสูตรในเซลล์อื่น)
         ' มีการตัดบรรทัดด้วย " _" เพื่อให้โค้ดอ่านง่ายขึ้น
-        .Range("G24:M24,G26:M26,H28,J28,L28,G31:H31,G33:H33,H35,L35,H36,L36,L38," & _
-               "G41:H41,G42:H42,G45:J45,G49:I49,L49:M49,G51:I51,L51:M51,G53:I53,J43:L43,G43:H43").ClearContents '<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<
+        .Range("G24:M26,H28:H28,J28,L28,G31:H33,H35:H36,L35:L36,L38:L38,L41:L41,G41:H43,G45:J45,G49:M49,H51:H53,J51:J53,L51:M53,G56:I60,L56:M56").ClearContents '<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<
         
         ' ล็อกแผ่นงานคืนหลังจากล้างข้อมูลเสร็จ เพื่อป้องกันผู้ใช้แก้ไขสูตรคำนวณโดยไม่ตั้งใจ
         .Protect Password:=myPassword
@@ -77,7 +76,7 @@ End Sub
 ' ======================================================================================
 Sub อยู่ดีมีสุข_Close_Leafltet()
     ' ปลดล็อกโครงสร้างไฟล์
-    call setWorkbookProtection(False) ' ปลดล็อกโครงสร้างไฟล์ชั่วคราว
+    Call SetWorkbookProtection(False) ' ปลดล็อกโครงสร้างไฟล์ชั่วคราว
     
     ' ซ่อนแผ่นงาน Leaflet
     Sheets("LL_อยู่ดีมีสุข").Visible = False '<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<
@@ -151,8 +150,8 @@ Public Sub อยู่ดีมีสุข_Get_Quotation()
     Dim wsKey As Worksheet
     Dim wsQTR As Worksheet
     Dim wsCF As Worksheet '<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<
-    Set wsKey = Worksheets("QT_อยู่ดีมีสุข")
-    Set wsQTR = Worksheets("QTR_อยู่ดีมีสุข")
+    Set wsKey = Worksheets("QT_อยู่ดีมีสุข")'<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<
+    Set wsQTR = Worksheets("QTR_อยู่ดีมีสุข")'<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<
     Set wsCF = Worksheets("CF_อยู่ดีมีสุข") '<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<
 
     ' 1. ตรวจสอบเงื่อนไขจังหวัดน้ำท่วมก่อน
@@ -178,7 +177,7 @@ Public Sub อยู่ดีมีสุข_Get_Quotation()
  
     
     ' 1. กำหนดชื่อและที่เก็บไฟล์
-    fileName = "ใบเสนอราคา_อยู่ดีมีสุข_" & Format(Now, "yyyy-mm-dd_hhmm") & wsKey.Range("G51").Value & ".pdf"
+    fileName = "ใบเสนอราคา_อยู่ดีมีสุข_" & Format(Now, "yyyy-mm-dd_hhmm") & wsKey.Range("G58").Value & ".pdf"
     filePath = ThisWorkbook.Path & "\" & fileName
     
     ' 2. คำสั่ง Export เป็น PDF
@@ -260,91 +259,114 @@ Public Sub CheckAndSuggestPremium(ByVal totalVal As Double)
     End Select
     
     ' ล็อกชีทกลับคืนหลังทำงานเสร็จ
-    Call SetSheetProtection(QTSheet, sheetLockSetting)
+    Call SetSheetProtection(QTSheet, SheetLockSetting)
 End Sub
 
-' ======================================================================================
-' UpdateLocationList: เวอร์ชันปรับปรุง (แก้ไขปัญหาลบ List ข้ามคอลัมน์)
-' รับค่า: Mode (Amphoe/Tambon), Prov (จังหวัด), Amp (อำเภอ - ใช้เฉพาะกรณี Mode = Tambon)
-' ======================================================================================
-Public Sub UpdateLocationList(ByVal Mode As String, ByVal Prov As String, Optional ByVal Amp As String = "")
-    Dim ws As Worksheet
-    Dim rawData As Variant
-    Dim resultData() As String
-    Dim lastRow As Long, i As Long, count As Long
-    Dim targetCol As String
+' ############################################################################################################
+' Sub สำหรับจัดการชีทและเขียนลิสต์อำเภอ,ตำบล (Action)
+' ############################################################################################################
+Public Sub UpdateLocationList1(ByVal Mode As String, ByVal Prov As String, Optional ByVal Amp As String = "")
+    Dim wsTarget As Worksheet
+    Dim arrResults As Variant
+    Dim targetCol As String, colAmphoe As String, colTambon As String
+    Dim targetLastRow As Long
     
-' --- STEP 1: ตั้งค่าเริ่มต้น และกำหนดเป้าหมาย ---
-Set ws = ThisWorkbook.Worksheets("CF_อยู่ดีมีสุข")'<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<
-
-' กำหนดคอลัมน์ปลายทาง: ถ้าหาอำเภอเขียนลง Z, ถ้าหาตำบลเขียนลง AA
-targetCol = IIf(Mode = "Amphoe", "Z", "AA")'<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<
-
-' ปิดการประมวลผลหน้าจอ (ทำให้โค้ดวิ่งเร็วขึ้น) และปลดล็อคชีท
-Application.ScreenUpdating = False
-call SetSheetProtection(ws, False) ' ปลดล็อกชีทชั่วคราว
-
-' --- STEP 2: ล้างข้อมูลเก่า (Cleanup) ---
-' หาบรรทัดสุดท้ายของคอลัมน์ที่จะเขียน เพื่อลบข้อมูลเดิมออกก่อนป้องกันข้อมูลค้าง
-Dim targetLastRow As Long
-targetLastRow = ws.Cells(ws.Rows.count, targetCol).End(xlUp).Row
-
-If targetLastRow >= 2 Then
-    ws.Range(ws.Cells(2, targetCol), ws.Cells(targetLastRow, targetCol)).ClearContents
-End If
-
-' พิเศษ: หากเป็นการเลือกจังหวัดใหม่ (Mode = Amphoe)
-' ต้องล้างข้อมูลในคอลัมน์ตำบล (AA) ทิ้งด้วย เพราะอำเภอเดิมจะใช้ไม่ได้แล้ว
-If Mode = "Amphoe" Then
-    Dim lastRowAA As Long
-    lastRowAA = ws.Cells(ws.Rows.count, "AA").End(xlUp).Row
-    If lastRowAA >= 2 Then ws.Range("AA2:AA" & lastRowAA).ClearContents
-End If
-
-' --- STEP 3: ดึงข้อมูลจากฐานข้อมูลเข้า Array (เพื่อความรวดเร็ว) ---
-' หาบรรทัดสุดท้ายของฐานข้อมูล (คอลัมน์ T)
-lastRow = ws.Cells(ws.Rows.count, "T").End(xlUp).Row
-If lastRow < 2 Then GoTo CleanUp ' ถ้าไม่มีข้อมูลเลย ให้ข้ามไปขั้นตอนสุดท้าย
-
-' ดึงข้อมูลจังหวัด/อำเภอ/ตำบล (T-V) มาเก็บไว้ในตัวแปร Array
-rawData = ws.Range("T2:V" & lastRow).Value
-
-' เตรียมพื้นที่เก็บผลลัพธ์ (Array) ขนาดสูงสุดเท่ากับจำนวนข้อมูลที่มี
-ReDim resultData(1 To UBound(rawData, 1), 1 To 1)
-count = 0
-
-' --- STEP 4: วนลูปคัดกรองข้อมูลตามเงื่อนไข ---
-For i = 1 To UBound(rawData, 1)
+    ' --- CONFIG: กำหนดเป้าหมาย ---
+    Set wsTarget = ThisWorkbook.Worksheets("CF_อยู่ดีมีสุข")'<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<
+    colAmphoe = "U" ' คอลัมน์สำหรับ LIST_อำเภอ'<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<
+    colTambon = "V" ' คอลัมน์สำหรับ LIST_ตำบล'<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<
     
-    ' กรณีที่ 1: หา "อำเภอ" ของจังหวัดที่เลือก
+    targetCol = IIf(Mode = "Amphoe", colAmphoe, colTambon)
+    
+    Application.ScreenUpdating = False
+    Call SetSheetProtection(wsTarget, False)
+    
+    ' 1. ล้างข้อมูลเก่า (Cleanup)
+    targetLastRow = wsTarget.Cells(wsTarget.Rows.count, targetCol).End(xlUp).Row
+    If targetLastRow >= 2 Then
+        wsTarget.Range(wsTarget.Cells(2, targetCol), wsTarget.Cells(targetLastRow, targetCol)).ClearContents
+    End If
+    
+    ' พิเศษ: หากเลือกจังหวัดใหม่ ให้ล้างรายการตำบลเดิมในชีทปลายทางทิ้งด้วย
     If Mode = "Amphoe" Then
-        If rawData(i, 1) = Prov And rawData(i, 2) <> "" Then
-            ' ตรวจสอบว่าชื่ออำเภอนี้ถูกเพิ่มไปหรือยัง (ป้องกันชื่อซ้ำ)
-            If Not IsInArray(CStr(rawData(i, 2)), resultData, count) Then
-                count = count + 1
-                resultData(count, 1) = rawData(i, 2)
-            End If
-        End If
+        Dim lastRowV As Long
+        lastRowV = wsTarget.Cells(wsTarget.Rows.count, colTambon).End(xlUp).Row
+        If lastRowV >= 2 Then wsTarget.Range(wsTarget.Cells(2, colTambon), wsTarget.Cells(lastRowV, colTambon)).ClearContents
+    End If
+    
+    ' 2. เรียกใช้ Function เพื่อขอข้อมูล Array
+    arrResults = GetFilteredLocationArray(Mode, Prov, Amp)
+    
+    ' 3. เขียนข้อมูลลงชีท
+    If Not IsEmpty(arrResults) Then
+        ' กรองเอาเฉพาะแถวที่มีข้อมูลจริงมาวาง (Resize ตามจำนวน count ที่ได้จาก Function)
+        ' ในที่นี้ Function คืนค่า Array ขนาดใหญ่ที่มีช่องว่าง ดังนั้นเราต้องหาจำนวนจริง
+        Dim actualCount As Long, i As Long
+        For i = 1 To UBound(arrResults, 1)
+            If arrResults(i, 1) = "" Then Exit For
+            actualCount = actualCount + 1
+        Next i
         
-    ' กรณีที่ 2: หา "ตำบล" ของจังหวัดและอำเภอที่เลือก
-    ElseIf Mode = "Tambon" Then
-        If rawData(i, 1) = Prov And rawData(i, 2) = Amp And rawData(i, 3) <> "" Then
-            ' ตรวจสอบชื่อซ้ำก่อนเพิ่มลงรายการ
-            If Not IsInArray(CStr(rawData(i, 3)), resultData, count) Then
-                count = count + 1
-                resultData(count, 1) = rawData(i, 3)
-            End If
+        If actualCount > 0 Then
+            wsTarget.Cells(2, targetCol).Resize(actualCount, 1).Value = arrResults
         End If
     End If
-Next i
-
-' --- STEP 5: เขียนผลลัพธ์ที่กรองได้ลงใน Excel ---
-If count > 0 Then
-    ws.Cells(2, targetCol).Resize(count, 1).Value = resultData
-End If
-
+    
 CleanUp:
-    call SetSheetProtection(ws, sheetLockSetting) ' ล็อกชีทคืนหลังทำงานเสร็จ
+    Call SetSheetProtection(wsTarget, SheetLockSetting)
+    Application.ScreenUpdating = True
+End Sub
+
+
+Public Sub UpdateLocationList2(ByVal Mode As String, ByVal Prov As String, Optional ByVal Amp As String = "")
+    Dim wsTarget As Worksheet
+    Dim arrResults As Variant
+    Dim targetCol As String, colAmphoe As String, colTambon As String
+    Dim targetLastRow As Long
+    
+    ' --- CONFIG: กำหนดเป้าหมาย ---
+    Set wsTarget = ThisWorkbook.Worksheets("CF_อยู่ดีมีสุข")'<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<
+    colAmphoe = "W" ' คอลัมน์สำหรับ LIST_อำเภอ'<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<
+    colTambon = "X" ' คอลัมน์สำหรับ LIST_ตำบล'<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<
+    
+    targetCol = IIf(Mode = "Amphoe", colAmphoe, colTambon)
+    
+    Application.ScreenUpdating = False
+    Call SetSheetProtection(wsTarget, False)
+    
+    ' 1. ล้างข้อมูลเก่า (Cleanup)
+    targetLastRow = wsTarget.Cells(wsTarget.Rows.count, targetCol).End(xlUp).Row
+    If targetLastRow >= 2 Then
+        wsTarget.Range(wsTarget.Cells(2, targetCol), wsTarget.Cells(targetLastRow, targetCol)).ClearContents
+    End If
+    
+    ' พิเศษ: หากเลือกจังหวัดใหม่ ให้ล้างรายการตำบลเดิมในชีทปลายทางทิ้งด้วย
+    If Mode = "Amphoe" Then
+        Dim lastRowV As Long
+        lastRowV = wsTarget.Cells(wsTarget.Rows.count, colTambon).End(xlUp).Row
+        If lastRowV >= 2 Then wsTarget.Range(wsTarget.Cells(2, colTambon), wsTarget.Cells(lastRowV, colTambon)).ClearContents
+    End If
+    
+    ' 2. เรียกใช้ Function เพื่อขอข้อมูล Array
+    arrResults = GetFilteredLocationArray(Mode, Prov, Amp)
+    
+    ' 3. เขียนข้อมูลลงชีท
+    If Not IsEmpty(arrResults) Then
+        ' กรองเอาเฉพาะแถวที่มีข้อมูลจริงมาวาง (Resize ตามจำนวน count ที่ได้จาก Function)
+        ' ในที่นี้ Function คืนค่า Array ขนาดใหญ่ที่มีช่องว่าง ดังนั้นเราต้องหาจำนวนจริง
+        Dim actualCount As Long, i As Long
+        For i = 1 To UBound(arrResults, 1)
+            If arrResults(i, 1) = "" Then Exit For
+            actualCount = actualCount + 1
+        Next i
+        
+        If actualCount > 0 Then
+            wsTarget.Cells(2, targetCol).Resize(actualCount, 1).Value = arrResults
+        End If
+    End If
+    
+CleanUp:
+    Call SetSheetProtection(wsTarget, SheetLockSetting)
     Application.ScreenUpdating = True
 End Sub
 
