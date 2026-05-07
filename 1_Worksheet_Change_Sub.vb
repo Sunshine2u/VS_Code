@@ -108,6 +108,13 @@ Private Sub Worksheet_Change(ByVal Target As Range)
         
     End If
 
+    If Not Intersect(Target, Me.Range("H28")) Is Nothing Then 'เมื่อกรอกชื่อจังหวัด
+        If len(Trim(Me.Range("G49").Text)) = 0 Then
+            Me.Range("G49").Value = "     บ้านเลขที่.....หมู่ที่....อาคาร/หมู่บ้าน..... ซอย.... ถนน...."
+            Me.Range("G49").Font.Color = RGB(166, 166, 166)
+        End If
+    End If
+
         ' ล็อกชีทคืน
     Call SetSheetProtection(Me, FileLockSetting) ' ใช้ค่าจาก Const ที่ตั้งไว้ใน 2_Product1_Sub.vb
     Application.EnableEvents = True
