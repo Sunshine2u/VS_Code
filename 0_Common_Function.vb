@@ -158,3 +158,26 @@ Private Function IsInArray(ByVal val As String, ByRef arr() As String, ByVal cur
     IsInArray = False
 End Function
 
+' ======================================================================================
+' SetSheetProtection: ฟังก์ชันกลางสำหรับจัดการการล็อก/ปลดล็อก
+' targetSheet: ส่ง Object ของ Worksheet ที่ต้องการจัดการเข้ามา
+' IsLock: True = ล็อกข้อมูล, False = ปลดล็อกข้อมูล
+' ======================================================================================
+Public Sub SetSheetProtection(ByVal targetSheet As Worksheet, ByVal IsLock As Boolean)
+    
+    ' ตรวจสอบเบื้องต้นว่ามีการส่ง Sheet เข้ามาจริงหรือไม่ (ป้องกัน Error)
+    If targetSheet Is Nothing Then Exit Sub
+
+    If IsLock Then
+        ' ---- กรณีสั่งให้ "ล็อก" (Protect) ----
+        ' คุณสามารถตั้งค่า Property การล็อกเพิ่มเติมได้ที่นี่
+        targetSheet.Protect Password:=myPassword, _
+                            DrawingObjects:=True, _
+                            Contents:=True, _
+                            Scenarios:=True
+    Else
+        ' ---- กรณีสั่งให้ "ปลดล็อก" (Unprotect) ----
+        targetSheet.Unprotect Password:=myPassword
+    End If
+    
+End Sub
