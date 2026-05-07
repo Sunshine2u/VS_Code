@@ -1,61 +1,52 @@
 ' ======================================================================================
-' GetPackageValidation: ฟังก์ชันตัวกลางสำหรับดึงข้อมูลและคำนวณหน้างาน
-' ทำหน้าที่: ตรวจสอบว่าทุนที่กรอกมา "ผ่านเกณฑ์" หรือ "ควรแนะนำค่าไหน"
-' ======================================================================================
-' ======================================================================================
-' GetPackageValidation: ฟังก์ชันตัวกลางสำหรับดึงข้อมูลและคำนวณหน้างาน
-' ปรับปรุงใหม่: รับค่าตารางอ้างอิงผ่านตัวแปร tableRef (Range)
+' GetPackageValidation: ฟังก์ชันคำนวณหน้างาน (เรียกใช้ภายใน)
+' รับค่า: ทุนประกัน (Double) และ ช่วงเซลล์ตารางอ้างอิง (Range)
+' คืนค่า: Array 5 ช่อง [สถานะ, ค่าต่ำกว่า, ค่าสูงกว่า, ต่ำสุด, สูงสุด]
 ' ======================================================================================
 Public Function GetPackageValidation(ByVal totalVal As Double, ByVal tableRef As Range) As Variant
-    Dim result(1 To 5) As Variant ' 1:Status, 2:Floor, 3:Ceiling, 4:Min, 5:Max
+    Dim result(1 To 5) As Variant
     Dim matchIdx As Variant
     
-    ' ตรวจสอบเบื้องต้นว่า Range ที่ส่งมามีข้อมูลหรือไม่
+    ' STEP 1: ตรวจสอบความปลอดภัย (หากส่ง Range มาว่างเปล่าให้เด้งออก)
     If tableRef Is Nothing Then
         result(1) = "Error: No Table Reference"
         GetPackageValidation = result
         Exit Function
     End If
     
-    ' --- ขั้นตอนที่ 1: หาขอบเขต ต่ำสุด-สูงสุด จากตารางที่ส่งมา ---
-    result(4) = Application.WorksheetFunction.Min(tableRef) ' ค่าต่ำสุดของตาราง
-    result(5) = Application.WorksheetFunction.Max(tableRef) ' ค่าสูงสุดของตาราง
+    ' STEP 2: คำนวณขอบเขตล่าง-บนของตารางจริง (Dynamic Min-Max)
+    result(4) = Application.WorksheetFunction.Min(tableRef)
+    result(5) = Application.WorksheetFunction.Max(tableRef)
 
-    ' --- ขั้นตอนที่ 2: เช็คว่าทุน "น้อยไป" หรือ "มากเกินไป" หรือไม่ ---
+    ' STEP 3: ตรวจสอบว่าทุน "หลุดช่วง" ที่รับประกันหรือไม่
     If totalVal < result(4) Or totalVal > result(5) Then
-        result(1) = "OutOfRange" ' ระบุสถานะ: นอกขอบเขต
+        result(1) = "OutOfRange"
         GetPackageValidation = result
         Exit Function
     End If
 
-    ' --- ขั้นตอนที่ 3: ตรวจสอบแบบตรงตัว (Exact Match) ---
+    ' STEP 4: ตรวจสอบแบบตรงตัว (Exact Match)
     matchIdx = Application.Match(totalVal, tableRef, 0)
     
     If Not IsError(matchIdx) Then
-        ' กรณีหาเจอตรงเป๊ะ
+        ' พบแผนที่ตรงเป๊ะ
         result(1) = "Valid" 
     Else
-        ' กรณีไม่ตรงเป๊ะ ให้หาค่าใกล้เคียงเพื่อแนะนำ
+        ' ไม่ตรงแผนเป๊ะ -> เริ่มกระบวนการหาแผนใกล้เคียง (Suggestion)
         result(1) = "Invalid" 
-        
         On Error Resume Next
-        ' หาค่าที่ "น้อยกว่าและใกล้ที่สุด" (Floor)
+        ' หาแผนที่ทุนน้อยกว่าที่ใกล้ที่สุด
         result(2) = Application.WorksheetFunction.Lookup(totalVal, tableRef)
-        
-        ' หาตำแหน่งลำดับเพื่อหาค่าที่ "มากกว่าและใกล้ที่สุด" (Ceiling)
+        ' หาแผนที่ทุนมากกว่าที่ใกล้ที่สุด
         matchIdx = Application.Match(totalVal, tableRef, 1)
-        
         If Not IsError(matchIdx) And matchIdx < tableRef.Rows.Count Then
-            ' ดึงค่าลำดับถัดไปในตาราง
             result(3) = tableRef.Cells(matchIdx + 1, 1).Value
         Else
-            ' ถ้าไม่มีค่าที่สูงกว่าแล้ว ให้ใช้ค่า Floor แทน
             result(3) = result(2) 
         End If
         On Error GoTo 0
     End If
     
-    ' ส่งผลลัพธ์กลับ
     GetPackageValidation = result
 End Function
 
@@ -63,9 +54,8 @@ End Function
 ' IsPremiumValid: ฟังก์ชันคืนค่า True/False
 ' วัตถุประสงค์: ใช้ขวางการทำงานถ้าข้อมูลไม่ถูกต้อง เช่น "ถ้าไม่ผ่าน ห้าม Save PDF"
 ' ======================================================================================
-Public Function IsPremiumValid(ByVal InputVal As Double) As Boolean
+Public Function IsPremiumValid(ByVal InputVal As Double, ByVal tableRef As Range) As Boolean
     Dim valResult As Variant
-    
     ' เรียกใช้ Logic กลางเพื่อขอข้อมูลผลการตรวจสอบ
     valResult = GetPackageValidation(InputVal, tableRef) ' ระบุตารางอ้างอิงด้วย
     
@@ -89,6 +79,7 @@ Public Function IsPremiumValid(ByVal InputVal As Double) As Boolean
             IsPremiumValid = False
     End Select
 End Function
+
 ' Function ค้นหาตำแหน่งคอลัมน์ (Index) จากข้อความหัวตาราง
 Public Function FindHeaderColumn(sheetName As String, headerRow As Long, headerText As String) As Long
     Dim ws As Worksheet, c As Range, lastCol As Long
