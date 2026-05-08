@@ -25,10 +25,10 @@ Private Sub Worksheet_Change(ByVal Target As Range)
     Application.EnableEvents = False ' ปิด Event เพื่อป้องกัน Code รันซ้อนกันเอง
     Call SetSheetProtection(Me, False) ' ปลดล็อก Sheet ชั่วคราว
 
-    Dim provName1 As String:provName1 = Trim$(CStr(Me.Range("H28").Value))'<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<
-    Dim ampName1 As String :ampName1 = Trim$(CStr(Me.Range("J28").Value))'<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<
-    Dim provName2 As String:provName2 = Trim$(CStr(Me.Range("H51").Value))'<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<
-    Dim ampName2 As String :ampName2 = Trim$(CStr(Me.Range("J51").Value))'<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<
+    Dim provName1 As String: provName1 = Trim$(CStr(Me.Range("H28").Value)) '<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<
+    Dim ampName1 As String: ampName1 = Trim$(CStr(Me.Range("J28").Value)) '<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<
+    Dim provName2 As String: provName2 = Trim$(CStr(Me.Range("H51").Value)) '<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<
+    Dim ampName2 As String: ampName2 = Trim$(CStr(Me.Range("J51").Value)) '<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<
 
     ' ---------- (A1) กรณีเปลี่ยน "จังหวัด" เอาประกัน(H28) ----------
     If Not Intersect(Target, Me.Range("H28")) Is Nothing Then
@@ -97,7 +97,7 @@ Private Sub Worksheet_Change(ByVal Target As Range)
             ' รวมค่าอาคารและเฟอร์นิเจอร์
             Me.Range("G43").Value = Me.Range("G41").Value + Me.Range("G42").Value
             'update CF_อยู่ดีมีสุข ด้วย
-            with Worksheets("CF_อยู่ดีมีสุข")
+            With Worksheets("CF_อยู่ดีมีสุข")
                 .Range("P12").Value = Me.Range("G41").Value 'ทุนอาคาร
                 .Range("P13").Value = Me.Range("G42").Value 'ทุนเฟอร์นิเจอร์
             End With
@@ -108,9 +108,21 @@ Private Sub Worksheet_Change(ByVal Target As Range)
         
     End If
 
-<<<<<<<<< Temporary merge branch 1
-    If Not Intersect(Target, Me.Range("H28")) Is Nothing Then 'เมื่อกรอกชื่อจังหวัด
-        If len(Trim(Me.Range("G49").Text)) = 0 Then
+        ' ---------- (D) ตรวจสอบและแนะนำการเขียนที่อยู่ (G26, G49) ----------
+
+     If Not Intersect(Target, Me.Range("H28,J28,L28,H51,J51,L51,G26,G49")) Is Nothing Then
+        If Len(Trim(Me.Range("G26").Text)) = 0 Then
+            Me.Range("G26").Value = "     บ้านเลขที่.....หมู่ที่....อาคาร/หมู่บ้าน..... ซอย.... ถนน...."
+            Me.Range("G26").Font.Color = RGB(166, 166, 166)
+        Else
+            If Me.Range("G26").Value = "     บ้านเลขที่.....หมู่ที่....อาคาร/หมู่บ้าน..... ซอย.... ถนน...." Then
+                Me.Range("G26").Font.Color = RGB(166, 166, 166)
+            Else
+                Me.Range("G26").Font.Color = RGB(0, 0, 0)
+            End If
+        End If
+
+        If Len(Trim(Me.Range("G49").Text)) = 0 Then
             Me.Range("G49").Value = "     บ้านเลขที่.....หมู่ที่....อาคาร/หมู่บ้าน..... ซอย.... ถนน...."
             Me.Range("G49").Font.Color = RGB(166, 166, 166)
         Else
@@ -133,4 +145,6 @@ ErrorHandler:
     Call SetSheetProtection(Me, FileLockSetting)
     Application.EnableEvents = True
 End Sub
+
+
 
