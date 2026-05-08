@@ -108,20 +108,8 @@ Private Sub Worksheet_Change(ByVal Target As Range)
         
     End If
 
-        ' ---------- (D) ตรวจสอบและแนะนำการเขียนที่อยู่ (G26, G49) ----------
-
-     If Not Intersect(Target, Me.Range("H28,J28,L28,H51,J51,L51,G26,G49")) Is Nothing Then
-        If len(Trim(Me.Range("G26").Text)) = 0 Then
-            Me.Range("G26").Value = "     บ้านเลขที่.....หมู่ที่....อาคาร/หมู่บ้าน..... ซอย.... ถนน...."
-            Me.Range("G26").Font.Color = RGB(166, 166, 166) 
-        Else
-            If Me.Range("G26").Value = "     บ้านเลขที่.....หมู่ที่....อาคาร/หมู่บ้าน..... ซอย.... ถนน...." Then
-                Me.Range("G26").Font.Color = RGB(166, 166, 166) 
-            Else 
-                Me.Range("G26").Font.Color = RGB(0, 0, 0)
-            End If
-        End If
-
+<<<<<<<<< Temporary merge branch 1
+    If Not Intersect(Target, Me.Range("H28")) Is Nothing Then 'เมื่อกรอกชื่อจังหวัด
         If len(Trim(Me.Range("G49").Text)) = 0 Then
             Me.Range("G49").Value = "     บ้านเลขที่.....หมู่ที่....อาคาร/หมู่บ้าน..... ซอย.... ถนน...."
             Me.Range("G49").Font.Color = RGB(166, 166, 166)
