@@ -250,7 +250,9 @@ Public Sub SetSheetProtection(ByVal targetSheet As Worksheet, ByVal IsLock As Bo
         targetSheet.Protect Password:=myPassword, _
                             DrawingObjects:=True, _
                             Contents:=True, _
-                            Scenarios:=True
+                            Scenarios:=True, _
+                            DrawingObjects:=True, _
+                            UserInterfaceOnly:=True
         ThisWorkbook.Protect Password:=myPassword, Structure:=True, Windows:=False
     Else
         ' ---- กรณีสั่งให้ "ปลดล็อก" (Unprotect) ----
