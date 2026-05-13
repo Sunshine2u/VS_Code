@@ -33,7 +33,7 @@ Private Sub Worksheet_Change(ByVal Target As Range)
     ' ---------- (A1) กรณีเปลี่ยน "จังหวัด" เอาประกัน(H28) ----------
     If Not Intersect(Target, Me.Range("H28")) Is Nothing Then
         ' 1. ตรวจสอบพื้นที่เสี่ยงภัยน้ำท่วม
-        Dim riskList As Variant: riskList = GetListRange("CF_Common", 1, "จังหวัดยกเว้นน้ำท่วม1")
+        Dim riskList As Variant: riskList = GetListRange(Sheet6, 1, "จังหวัดยกเว้นน้ำท่วม1")
         If Not IsError(Application.Match(provName1, riskList, 0)) Then
             MsgBox "พบว่าจังหวัด " & provName & " เป็นพื้นที่เสี่ยงภัยน้ำท่วม" & vbCrLf & _
                    "โปรดติดต่อเจ้าหน้าที่ MTI ผู้ดูแลตัวแทน ในการออกใบเสนอราคา", vbExclamation, "แจ้งเตือนความเสี่ยง"

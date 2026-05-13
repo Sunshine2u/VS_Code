@@ -9,21 +9,17 @@
 ' เหมาะสำหรับการดึงข้อมูลจากฐานข้อมูลและนำไปใช้ต่อใน Sub ต่างๆ เช่น การอัปเดตรายชื่อจังหวัด/อำเภอ/ตำบล
 ' =======================================================================================   
 Public Function GetFilteredLocationArray(ByVal Mode As String, ByVal Prov As String, Optional ByVal Amp As String = "") As Variant
-    Dim wsCommon As Worksheet
     Dim rawData As Variant
     Dim resultData() As String
-    Dim lastRow As Long, i As Long, count As Long
-    
-    Set wsCommon = ThisWorkbook.Worksheets("CF_Common") '<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<
-    
-    ' 1. หาบรรทัดสุดท้ายและดึงข้อมูลเข้า Array (C=จังหวัด, D=อำเภอ, E=ตำบล)
-    lastRow = wsCommon.Cells(wsCommon.Rows.count, "C").End(xlUp).Row
-    If lastRow < 2 Then
-        GetFilteredLocationArray = Empty
-        Exit Function
-    End If
-    
-    rawData = wsCommon.Range("C2:E" & lastRow).Value
+    Dim i As Long, count As Long
+    Dim CommonSheet As Worksheet
+    Dim TargetRange As Range
+
+    Set CommonSheet = ThisWorkbook.Worksheets("CF_Common") '<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<
+    Set TargetRange = CommonSheet.Range("data_Thai56[[Province]:[Tambon]]") '<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<
+
+    ' 1. ดึงข้อมูลเข้า Array (C=จังหวัด, D=อำเภอ, E=ตำบล)
+    rawData = TargetRange.Value ' ดึงข้อมูลเป็น Array 2 มิติ (1 to N, 1 to 3)
     ReDim resultData(1 To UBound(rawData, 1), 1 To 1)
     count = 0
     
@@ -144,9 +140,8 @@ End Function
 ' รับค่า: ชื่อแผ่นงาน, แถวหัวตาราง, ข้อความหัวตารางที่ต้องการค้นหา
 ' คืนค่า: เลขคอลัมน์ที่พบ (Long) หรือ 0 ถ้าไม่พบ
 ' ======================================================================================
-Public Function FindHeaderColumn(sheetName As String, headerRow As Long, headerText As String) As Long
-    Dim ws As Worksheet, c As Range, lastCol As Long
-    Set ws = ThisWorkbook.Worksheets(sheetName)
+Public Function FindHeaderColumn(ByRef ws As Worksheet, headerRow As Long, headerText As String) As Long
+    Dim c As Range, lastCol As Long
     
     ' หาคอลัมน์สุดท้ายที่มีข้อมูลในแถวนั้น เพื่อจำกัดขอบเขตการวนลูป
     lastCol = ws.Cells(headerRow, ws.Columns.count).End(xlToLeft).Column
@@ -167,18 +162,17 @@ End Function
 ' ======================================================================================
 ' Function ดึงข้อมูลจากคอลัมน์มาเป็น Range (เพื่อนำไปใช้ต่อใน Match)
 ' รับค่า: ชื่อแผ่นงาน, แถวหัวตาราง, ข้อความหัวตารางที่ต้องการค้นหา
+' คืนค่า: Range ของข้อมูลในคอลัมน์นั้น (จากแถวถัดไปจนถึงแถวสุดท้ายที่มีข้อมูล) ที่มีคอลัมน์ตรงกับหัวตารางที่ระบุ (คอลัมน์เดียว)
 ' ======================================================================================
-Public Function GetListRange(ByVal sheetName As String, ByVal headerRow As Long, ByVal headerText As String) As Range
-    Dim ws As Worksheet, colIndex As Long, lastRow As Long
+Public Function GetListRange(ByRef ws As Worksheet, ByVal headerRow As Long, ByVal headerText As String) As Range
+
+    Dim colIndex As Long, lastRow As Long
     
-    On Error Resume Next
-    Set ws = ThisWorkbook.Worksheets(sheetName)
-    On Error GoTo 0
-    
+    ' ตรวจสอบเบื้องต้นว่ามีการส่ง Worksheet เข้ามาจริงหรือไม่ (ป้องกัน Error)
     If ws Is Nothing Then Exit Function
     
     ' หาเลขคอลัมน์
-    colIndex = FindHeaderColumn(sheetName, headerRow, headerText)
+    colIndex = FindHeaderColumn(ws, headerRow, headerText)
     
     If colIndex > 0 Then
         lastRow = ws.Cells(ws.Rows.count, colIndex).End(xlUp).Row
@@ -197,13 +191,15 @@ Public Function IsFloodRisk(ByVal provinceName As String) As Boolean
     Dim riskRange As Range
     Dim result As Variant
     Dim cleanProv As String: cleanProv = Trim$(CStr(provinceName))
+
+
     
     ' หากไม่ระบุชื่อจังหวัด ให้ถือว่าไม่เสี่ยง
     If cleanProv = "" Then IsFloodRisk = False: Exit Function
     
     ' ขั้นตอนที่ 1: ดึง Range รายชื่อจังหวัดเสี่ยงภัยมาจากฐานข้อมูล
     ' ปรับ "CF_อยู่ดีมีสุข", 1, "จังหวัดยกเว้นน้ำท่วม" ให้ตรงตามหน้างานจริง
-    Set riskRange = GetListRange("CF_Common", 1, "จังหวัดยกเว้นน้ำท่วม1")
+    Set riskRange = GetListRange(Sheet6, 1, "จังหวัดยกเว้นน้ำท่วม1") 'Sheet6 = "CF_Common" <<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<
     
     ' ขั้นตอนที่ 2: ตรวจสอบความปลอดภัย (หากไม่พบตารางรายชื่อ ให้ผ่านไปก่อน)
     If riskRange Is Nothing Then
@@ -251,7 +247,6 @@ Public Sub SetSheetProtection(ByVal targetSheet As Worksheet, ByVal IsLock As Bo
                             DrawingObjects:=True, _
                             Contents:=True, _
                             Scenarios:=True, _
-                            DrawingObjects:=True, _
                             UserInterfaceOnly:=True
         ThisWorkbook.Protect Password:=myPassword, Structure:=True, Windows:=False
     Else
@@ -281,20 +276,21 @@ End Sub
 ' =======================================================================================
 Public Sub UnlockAllSheets()
     Dim ws As Worksheet
-    For Each ws In ThisWorkbook.Worksheets
+    For Each ws In ActiveWorkbook.Worksheets
         ws.Unprotect Password:=myPassword
     Next ws
-    ThisWorkbook.Unprotect Password:=myPassword
+    ActiveWorkbook.Unprotect Password:=myPassword
 End Sub
 
 ' ======================================================================================
 ' ---------- Sub Routine สำหรับรีเซ็ตระบบด้วยตนเอง ----------
 ' เหมาะสำหรับสถานการณ์ที่ระบบ Event หรือ Calculation มีปัญหา เช่น ค้าง, ไม่ตอบสนอง, หรือเกิดข้อผิดพลาดที่ทำให้ Excel อยู่ในสถานะไม่ปกติ
 ' =======================================================================================
-Public Sub ResetExcelEvents()
+Sub ResetExcelEvents()
     Application.EnableEvents = True
     Application.Calculation = xlCalculationAutomatic
 End Sub
+
 
 
 
