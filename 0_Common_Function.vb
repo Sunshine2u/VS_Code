@@ -248,10 +248,12 @@ Public Sub SetSheetProtection(ByVal targetSheet As Worksheet, ByVal IsLock As Bo
                             Contents:=True, _
                             Scenarios:=True, _
                             UserInterfaceOnly:=True
+        targetSheet.EnableSelection = xlUnlockedCells
         ThisWorkbook.Protect Password:=myPassword, Structure:=True, Windows:=False
     Else
         ' ---- กรณีสั่งให้ "ปลดล็อก" (Unprotect) ----
         targetSheet.Unprotect Password:=myPassword
+        targetSheet.EnableSelection = xlNoRestrictions
         ThisWorkbook.Unprotect Password:=myPassword
     End If
     

@@ -22,41 +22,52 @@ Public Const WorkbookLockSetting As Boolean = False 'ตั้งค่าให
 
 ' Sub สำหรับล้างข้อมูล (Reset) ในแบบฟอร์มใบเสนอราคาหน้าหลัก
 Public Sub อยู่ดีมีสุข_Clear_Input()
-    Dim QTSheet As Worksheet : Set QTSheet = ThisWorkbook.Worksheets("QT_อยู่ดีมีสุข") '<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<
-
-    ' ปิดระบบ Event ชั่วคราว: เพื่อป้องกันไม่ให้โค้ด Event อื่นๆ (เช่น Worksheet_Change) ทำงานแทรก
-    ' และช่วยให้การล้างข้อมูลหลายๆ เซลล์พร้อมกันทำได้รวดเร็วขึ้น
+    Dim QTSheet As Worksheet
+    
+    On Error GoTo ClearErrorHandler
+    Set QTSheet = ThisWorkbook.Worksheets("QT_อยู่ดีมีสุข")'<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<
+    
+    ' ปิดระบบ Event ชั่วคราวป้องกันการขัดจังหวะขณะล้างข้อมูลหลายๆ เซลล์พร้อมกัน
     Application.EnableEvents = False
     
-    ' อ้างอิงการทำงานกับแผ่นงานหน้าคีย์ข้อมูลใบเสนอราคา
-    With QTSheet
-        ' ปลดล็อกแผ่นงานก่อนเพื่อให้สามารถลบข้อมูลในเซลล์ที่ถูกล็อกไว้ได้
+   With QTSheet
+        ' ปลดล็อกแผ่นงาน
         .Unprotect Password:=myPassword
         
-        ' ล้างเฉพาะเนื้อหา (ClearContents) ในช่วงเซลล์ที่กำหนด (ไม่ลบ Format หรือสูตรในเซลล์อื่น)
-        ' มีการตัดบรรทัดด้วย " _" เพื่อให้โค้ดอ่านง่ายขึ้น
-        .Range("G24:M26,H28:H28,J28,L28,G31:H33,H35:H36,L35:L36,L38:L38,L41:L41,G41:H43,G45:J45,G49:M49,H51:H53,J51:J53,L51:M53,G56:I60,L56:M56").ClearContents '<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<
+        ' 1. ประกาศตัวแปร Array เพื่อเก็บเฉพาะ "ชื่อเซลล์แรกสุด (Top-Left Cell)" ของแต่ละช่อง
+        Dim cleanRanges As Variant
+        Dim cellName As Variant
         
-        ' ล็อกแผ่นงานคืนหลังจากล้างข้อมูลเสร็จ เพื่อป้องกันผู้ใช้แก้ไขสูตรคำนวณโดยไม่ตั้งใจ
+        ' 2. นำชื่อเซลล์ทั้งหมดมารวมกันไว้ใน Array เดียว (เรียงลำดับตามต้องการได้เลย)
+        ' ใส่แค่เซล์แรก ในกรณีเป็น Merged Cells
+        cleanRanges = Array( _
+            "G24", "G26","H28","J28","L28", _
+            "G31", "G33", "H35","H36", "L35" ,"L36" , "L38","G41", "G42", "G43","G45", _
+            "G49","G57", "H51", "H53", "H59", "H61", "J51", "J53","J59","L51","L53","L59","F55", _
+            "G64","G66","G68","L64" _
+        ) '<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<
+        
+        ' 3. ใช้ For Each เพื่อ Loop ดึงชื่อเซลล์ออกมา Set ค่าเป็นว่างทีละช่อง
+        For Each cellName In cleanRanges
+            ' ใช้ .Value = "" ตรงไปที่เซลล์นั้นๆ ปลอดภัยจาก Error 1004 แน่นอน
+            .Range(cellName).Value = ""
+        Next cellName
+
+        ' ล็อกแผ่นงานคืนกลับ
         .Protect Password:=myPassword
     End With
+    
+    MsgBox "ล้างข้อมูลหน้าแบบฟอร์มเรียบร้อยแล้ว", vbInformation, "ล้างข้อมูล"
 
-    ' เปิดระบบ Event กลับคืนสู่ปกติ
+ClearSafeExit:
     Application.EnableEvents = True
-    
-    ' แสดงข้อความแจ้งผู้ใช้ว่าดำเนินการสำเร็จ
-    MsgBox "ล้างข้อมูลเรียบร้อยแล้ว", vbInformation, "ระบบแจ้งเตือน"
-    
-    ' เรียกฟังก์ชันรีเซ็ตค่าระบบเสริม เพื่อให้มั่นใจว่า Excel กลับมาอยู่ในสถานะพร้อมทำงานปกติ
-    Call ResetExcelEvents
-    
-    ' จบการทำงานของ Sub หลัก (ป้องกันไม่ให้โค้ดไหลไปทำงานใน ErrorHandler)
     Exit Sub
 
-ErrorHandler:
-    ' หากเกิดความผิดพลาดระหว่างทาง ให้เปิดระบบ Event คืนเสมอ เพื่อไม่ให้ Excel ค้าง
+ClearErrorHandler:
+    MsgBox "เกิดข้อผิดพลาดขณะล้างข้อมูล: " & Err.Description, vbCritical, "Error"
+    ' เปิดระบบคืนทุกครั้งแม้โค้ดจะทำงานผิดพลาด
+    If Not QTSheet Is Nothing Then QTSheet.Protect Password:=myPassword
     Application.EnableEvents = True
-    MsgBox "เกิดข้อผิดพลาดในการล้างข้อมูล: " & Err.Description, vbCritical, "ข้อผิดพลาดระบบ"
 End Sub
 
 ' =======================================================================================
@@ -66,11 +77,14 @@ End Sub
 Sub อยู่ดีมีสุข_Go_To_Leaflet()
     ' ปลดล็อกโครงสร้างไฟล์เพื่อให้สามารถเปลี่ยนสถานะการซ่อนของแผ่นงานได้
     Call SetWorkbookProtection(False)
+
+    Dim leafletSheet As Worksheet
+    Set leafletSheet = ThisWorkbook.Worksheets("LL_อยู่ดีมีสุข") '<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<
     
-    ' แสดงแผ่นงาน Leaflet (ที่อาจถูกซ่อนอยู่)
-    Sheets("LL_อยู่ดีมีสุข").Visible = True '<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<
+    'แสดงแผ่นงาน Leaflet (ที่อาจถูกซ่อนอยู่)
+    leafletSheet.Visible = True 
     ' ย้ายหน้าจอไปยังแผ่นงานนั้น
-    Worksheets("LL_อยู่ดีมีสุข").Activate '<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<
+    leafletSheet.Activate 
     
     ' ล็อกโครงสร้างไฟล์คืน เพื่อป้องกันการลบหรือสลับลำดับแผ่นงาน
     Call SetWorkbookProtection(WorkbookLockSetting)
@@ -83,11 +97,16 @@ End Sub
 Sub อยู่ดีมีสุข_Close_Leafltet()
     ' ปลดล็อกโครงสร้างไฟล์
     Call SetWorkbookProtection(False) ' ปลดล็อกโครงสร้างไฟล์ชั่วคราว
-    
+    Dim leafletSheet As Worksheet
+    Dim QTSheet As Worksheet
+
+    Set leafletSheet = ThisWorkbook.Worksheets("LL_อยู่ดีมีสุข") '<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<
+    Set QTSheet = ThisWorkbook.Worksheets("QT_อยู่ดีมีสุข") '<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<
+
     ' ซ่อนแผ่นงาน Leaflet
-    Sheets("LL_อยู่ดีมีสุข").Visible = False '<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<
+    leafletSheet.Visible = False
     ' กลับมายังหน้าคีย์ข้อมูลใบเสนอราคา
-    Worksheets("QT_อยู่ดีมีสุข").Activate '<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<
+    QTSheet.Activate
     
     ' ล็อกโครงสร้างไฟล์คืน
     Call SetWorkbookProtection(WorkbookLockSetting) 'ล็อกโครงสร้างไฟล์คืน
@@ -148,6 +167,27 @@ Sub อยู่ดีมีสุข_Preview_Quotation()
     ' ล็อกโครงสร้างไฟล์คืน
     Call SetWorkbookProtection(WorkbookLockSetting)
 End Sub
+
+========================================================================================
+' Sub สำหรับซ่อนแถวกรณีที่มีการเลือกที่อยู่รับเอกสารเป็นที่เดียวกับที่อยู่เอาประกัน (F55)
+=========================================================================================
+
+Sub อยู่ดีมีสุข_Hide_Address_Rows()
+    Dim QTSheet As Worksheet
+    Dim Checkbox As Range
+    Dim HiddingRows As Range
+
+    Set QTSheet = ThisWorkbook.Worksheets("QT_อยู่ดีมีสุข") '<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<
+    Set Checkbox = QTSheet.Range("F55") '<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<
+    Set HiddingRows = QTSheet.Rows("56:61") '<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<
+        
+    If Checkbox.Value = True Then
+        HiddingRows.Hidden = True
+    Else
+        HiddingRows.Hidden = False
+    End If
+End Sub
+
 
 ' =======================================================================================
 'กดเพื่อสร้างใบเสนอราคา PDF

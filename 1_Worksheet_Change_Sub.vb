@@ -17,7 +17,7 @@
 
 Private Sub Worksheet_Change(ByVal Target As Range)
     ' STEP 1: ตรวจสอบขอบเขตเซลล์ที่ต้องการดักจับ (จังหวัด H28, อำเภอ J28,จังหวัด H51, อำเภอ J51, ทุนประกัน G41-G42)
-    If Intersect(Target, Me.Range("H28,J28,L28,H51,J51,L51,G41:H41,G42:H42,G26,G49")) Is Nothing Then Exit Sub
+    If Intersect(Target, Me.Range("H28,J28,L28,H51,J51,L51,H59,J59,L59,G41:H41,G42:H42,G26,G49,G57,I55")) Is Nothing Then Exit Sub '<<<<<<<<<<<<<<<<<<<<<<<<<
 
     On Error GoTo ErrorHandler
     
@@ -29,13 +29,15 @@ Private Sub Worksheet_Change(ByVal Target As Range)
     Dim ampName1 As String: ampName1 = Trim$(CStr(Me.Range("J28").Value)) '<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<
     Dim provName2 As String: provName2 = Trim$(CStr(Me.Range("H51").Value)) '<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<
     Dim ampName2 As String: ampName2 = Trim$(CStr(Me.Range("J51").Value)) '<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<
+    Dim provName3 As String: provName3 = Trim$(CStr(Me.Range("H59").Value)) '<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<
+    Dim ampName3 As String: ampName3 = Trim$(CStr(Me.Range("J59").Value)) '<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<
 
     ' ---------- (A1) กรณีเปลี่ยน "จังหวัด" เอาประกัน(H28) ----------
     If Not Intersect(Target, Me.Range("H28")) Is Nothing Then
         ' 1. ตรวจสอบพื้นที่เสี่ยงภัยน้ำท่วม
         Dim riskList As Variant: riskList = GetListRange(Sheet6, 1, "จังหวัดยกเว้นน้ำท่วม1")
         If Not IsError(Application.Match(provName1, riskList, 0)) Then
-            MsgBox "พบว่าจังหวัด " & provName & " เป็นพื้นที่เสี่ยงภัยน้ำท่วม" & vbCrLf & _
+            MsgBox "พบว่าจังหวัด " & provName1 & " เป็นพื้นที่เสี่ยงภัยน้ำท่วม" & vbCrLf & _
                    "โปรดติดต่อเจ้าหน้าที่ MTI ผู้ดูแลตัวแทน ในการออกใบเสนอราคา", vbExclamation, "แจ้งเตือนความเสี่ยง"
         End If
 
@@ -81,6 +83,27 @@ Private Sub Worksheet_Change(ByVal Target As Range)
         
     End If
 
+        ' ---------- (A3) กรณีเปลี่ยน "จังหวัด" เอาประกัน(H59) ----------
+    If Not Intersect(Target, Me.Range("H59")) Is Nothing Then
+        ' 2. อัปเดตรายชื่อ "อำเภอ" ลงในฐานข้อมูล (คอลัมน์  "W" ใน CF_อยู่ดีมีสุข)
+        ' และล้างค่าอำเภอ/ตำบลเดิมที่หน้าจอออกเพื่อให้เลือกใหม่
+        Me.Range("J59,L59:M59").ClearContents
+        Call UpdateLocationList3("Amphoe", provName3)
+        
+    End If
+
+    ' ---------- (B3) กรณีเปลี่ยน "อำเภอ" (J59) ----------
+    If Not Intersect(Target, Me.Range("J59")) Is Nothing Then
+        ' 1. ตรวจสอบว่ามีการเลือกจังหวัดไว้ก่อนหรือไม่
+        If provName3 <> "" And ampName3 <> "" Then
+            ' 2. อัปเดตรายชื่อ "ตำบล" ลงในฐานข้อมูล (คอลัมน์ AA ใน CF_อยู่ดีมีสุข)
+            ' และล้างค่าตำบลเดิมที่หน้าจอ (L59) ออก
+            Me.Range("L59:M59").ClearContents
+            Call UpdateLocationList3("Tambon", provName3, ampName3)
+        End If
+        
+    End If
+
         ' ---------- (C) กรณีเปลี่ยน "ทุนประกัน" (G41, G42) ----------
     
     ' ---------- ส่วนคำนวณ G43 อัตโนมัติ (G41 + G42) ----------
@@ -108,9 +131,9 @@ Private Sub Worksheet_Change(ByVal Target As Range)
         
     End If
 
-        ' ---------- (D) ตรวจสอบและแนะนำการเขียนที่อยู่ (G26, G49) ----------
+        ' ---------- (D) ตรวจสอบและแนะนำการเขียนที่อยู่ (G26, G49, G57) ----------
 
-     If Not Intersect(Target, Me.Range("H28,J28,L28,H51,J51,L51,G26,G49")) Is Nothing Then
+    If Not Intersect(Target, Me.Range("H28,J28,L28,H51,J51,L51,H59,J59,L59,G26,G49,G57")) Is Nothing Then
         If Len(Trim(Me.Range("G26").Text)) = 0 Then
             Me.Range("G26").Value = "     บ้านเลขที่.....หมู่ที่....อาคาร/หมู่บ้าน..... ซอย.... ถนน...."
             Me.Range("G26").Font.Color = RGB(166, 166, 166)
@@ -133,7 +156,19 @@ Private Sub Worksheet_Change(ByVal Target As Range)
             End If
         End If
 
+        If Len(Trim(Me.Range("G57").Text)) = 0 Then
+            Me.Range("G57").Value = "     บ้านเลขที่.....หมู่ที่....อาคาร/หมู่บ้าน..... ซอย.... ถนน...."
+            Me.Range("G57").Font.Color = RGB(166, 166, 166)
+        Else
+            If Me.Range("G57").Value = "     บ้านเลขที่.....หมู่ที่....อาคาร/หมู่บ้าน..... ซอย.... ถนน...." Then
+                Me.Range("G57").Font.Color = RGB(166, 166, 166)
+            Else
+                Me.Range("G57").Font.Color = RGB(0, 0, 0)
+            End If
+        End If
+
     End If
+
 
         ' ล็อกชีทคืน
     Call SetSheetProtection(Me, FileLockSetting) ' ใช้ค่าจาก Const ที่ตั้งไว้ใน 2_Product1_Sub.vb
@@ -145,6 +180,4 @@ ErrorHandler:
     Call SetSheetProtection(Me, FileLockSetting)
     Application.EnableEvents = True
 End Sub
-
-
 
