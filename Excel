@@ -1,0 +1,22 @@
+=IF(
+  MAX(
+    H38,
+    L38
+  ) * SUMIFS(
+    Yoo_Dee_Building_Price[ราคาต่อตารางเมตร],
+    Yoo_Dee_Building_Price[สิ่งปลูกสร้าง],
+    QT_อยู่ดีมีสุข!G31
+  ) > 10000000,
+  10000000,
+  ROUNDUP(
+    MAX(
+      H38,
+      L38
+    ) * SUMIFS(
+      Yoo_Dee_Building_Price[ราคาต่อตารางเมตร],
+      Yoo_Dee_Building_Price[สิ่งปลูกสร้าง],
+      QT_อยู่ดีมีสุข!G31
+    ),
+    - 5
+  )
+)
