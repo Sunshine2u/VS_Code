@@ -32,8 +32,10 @@ Private Sub Worksheet_Change(ByVal Target As Range)
     Dim Noti_Addr2 As Range: Set Noti_Addr2 = Me.Range("G49")     ' ช่องแนะนำการเขียนที่อยู่ 2
     Dim Noti_Addr3 As Range: Set Noti_Addr3 = Me.Range("G57")     ' ช่องแนะนำการเขียนที่อยู่ 3
     
+    Dim InsureName As Range: Set InsureName = Me.Range("G24")     ' ช่องชื่อผู้เอาประกันภัย (ใช้ตรวจสอบว่ามีการกรอกข้อมูลในส่วนนี้หรือยัง เพื่อเป็นเงื่อนไขในการแสดงผลแจ้งเตือนที่อยู่)
     Dim Input_BuildType As Range: Set Input_BuildType = Me.Range("G31") ' ประเภทสิ่งปลูกสร้าง
     Dim Noti_Floor As Range:     Set Noti_Floor = Me.Range("H36")     ' ช่องจำนวนชั้น
+    Dim SamePostOption as Range: Set SamePostOption = Me.Range("F55") ' ตัวเลือกที่อยู่เดียวกัน (Yes/No)
     
     ' รวมเซลล์ทั้งหมดที่ต้องการให้เกิด Event (ดักจับการเปลี่ยนแปลง)
     ' *หมายเหตุ: ตรง Me.Range ข้างล่างนี้ ระบบจะอ้างอิงจากตัวแปรด้านบนให้อัตโนมัติ ไม่ต้องตามแก้แล้วครับ*
@@ -41,7 +43,7 @@ Private Sub Worksheet_Change(ByVal Target As Range)
                                Input_Prov2, Input_Amp2, _
                                Input_Prov3, Input_Amp3, _
                                Input_BuildingPrice, Input_FurniturePrice, Noti_Addr1, Noti_Addr2, Noti_Addr3, _
-                               Input_BuildType)) Is Nothing Then Exit Sub
+                               Input_BuildType, SamePostOption, InsureName)) Is Nothing Then Exit Sub
     ' =========================================================================
 
     On Error GoTo ErrorHandler
@@ -65,6 +67,7 @@ Private Sub Worksheet_Change(ByVal Target As Range)
 
     ' 3. ตรวจสอบและแนะนำการเขียนที่อยู่ (Placeholder)
     ' ถ้าระบบตรวจพบว่าช่องที่อยู่ช่องใดช่องหนึ่ง หรือจังหวัด/อำเภอเปลี่ยน จะทำการตรวจสอบความสะอาดของข้อมูลที่อยู่ทันที
+    Call ApplyAddressPlaceholder(InsureName) ' ถ้าเริ่มกรอก InsureName แล้ว ถึงจะเริ่มตรวจสอบที่อยู่และแสดง Placeholder แนะนำการกรอกที่อยู่
     Call ApplyAddressPlaceholder(Noti_Addr1)
     Call ApplyAddressPlaceholder(Noti_Addr2)
     Call ApplyAddressPlaceholder(Noti_Addr3)

@@ -148,8 +148,12 @@ Sub อยู่ดีมีสุข_Preview_Quotation()
     If Not IsPremiumValid(PremVal, PremRange) Then
         Exit Sub ' ถ้าฟังก์ชันคืนค่า False (ทุนไม่ตรงแผน) จะหยุดทำงานทันทีพร้อมแจ้งเตือนจากในฟังก์ชันเอง
     End If
+
+    If Not IsQuotationFormComplete(QTSheet) Then
+        Exit Sub ' ถ้าฟังก์ชันคืนค่า False (ทุนไม่ตรงแผน) จะหยุดทำงานทันทีพร้อมแจ้งเตือนจากในฟังก์ชันเอง
+    End If
     
-    ' --- หากผ่านทั้ง 2 ด่านด้านบน ถึงจะเริ่มกระบวนการ Preview ---
+    ' --- หากผ่านทั้ง 3 ด่านด้านบน ถึงจะเริ่มกระบวนการ Preview ---
 
     ' ปลดล็อกโครงสร้างไฟล์
     Call SetWorkbookProtection(False)
@@ -229,6 +233,10 @@ Public Sub อยู่ดีมีสุข_Get_Quotation()
         Exit Sub ' ถ้าฟังก์ชันคืนค่า False (ทุนไม่ตรงแผน) จะหยุดทำงานทันทีพร้อมแจ้งเตือนจากในฟังก์ชันเอง
     End If
     
+    If Not IsQuotationFormComplete(QTSheet) Then
+        Exit Sub ' ถ้าฟังก์ชันคืนค่า False (ทุนไม่ตรงแผน) จะหยุดทำงานทันทีพร้อมแจ้งเตือนจากในฟังก์ชันเอง
+    End If
+
     ' ปลดล็อก Workbook เพื่อให้สามารถทำงานต่อได้
     Call SetWorkbookProtection(False)
     
@@ -500,3 +508,71 @@ CleanUp:
     Call SetSheetProtection(wsTarget, SheetLockSetting)
     Application.ScreenUpdating = True
 End Sub
+
+
+' ==========================================================================================
+' Function สำหรับตรวจสอบว่ามีการกรอกข้อมูลในช่องที่บังคับครบถ้วนแล้วหรือไม่
+' Return: True (กรอกครบ), False (กรอกไม่ครบพร้อมแจ้งเตือนเซลล์แรกที่ว่าง)
+' TargetSheet: ส่งเข้ามาเป็น Worksheet ที่ต้องการตรวจสอบ (ในที่นี้คือ "QT_อยู่ดีมีสุข")
+' ==========================================================================================
+Public Function IsQuotationFormComplete(ByVal TargetSheet As Worksheet) As Boolean
+    
+    ' 📍 [ส่วนแก้ไขพิกัด] ย้ายหน้าจอใหม่ หรือช่องบังคับกรอกเปลี่ยนไป ให้มาแก้ไขกลุ่มเซลล์ตรงนี้ที่เดียว!
+    ' อ้างอิงจากเครื่องหมายดอกจันสีแดง (*) บนหน้าจอ "เมืองไทยอยู่ดีมีสุข"
+    
+    Dim RequiredFields As Range
+    With TargetSheet
+        Set RequiredFields = Union( _
+            .Range("G24"), _
+            .Range("G26"), _
+            .Range("H28"), _
+            .Range("J28"), _
+            .Range("L28"), _
+            .Range("G31"), _
+            .Range("G33"), _
+            .Range("G41"), _
+            .Range("G42"), _
+            .Range("G45"), _
+            .Range("G49"), _
+            .Range("H51"), _
+            .Range("J51"), _
+            .Range("L51"), _
+            .Range("H53"), _
+            .Range("J53"), _
+            .Range("G64"), _
+            .Range("L64") _
+        )
+    End With
+    ' ==========================================================================================
+
+    Dim Cell As Range
+    Dim IsValid As Boolean: IsValid = True
+    Dim PlaceholderText As String: PlaceholderText = "บ้านเลขที่.....หมู่ที่....อาคาร/หมู่บ้าน..... ซอย.... ถนน...." '<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<
+
+    ' ลูปตรวจเช็คทีละเซลล์ในกลุ่มที่บังคับกรอก
+    For Each Cell In RequiredFields
+        
+        ' 1. เช็คว่าเป็นค่าว่าง หรือกรอกแต่ช่องว่าง (Space) หรือไม่
+        If Trim$(CStr(Cell.Value)) = "" Then
+            IsValid = False
+            
+        ' 2. เช็คกรณีพิเศษ: ช่องที่อยู่ ถ้ายังเป็นข้อความ Placeholder แนะนำการกรอกอยู่ ถือว่ายังไม่ได้กรอกจริง
+        ElseIf InStr(Cell.Value, "บ้านเลขที่.....หมู่ที่") > 0 Then
+            IsValid = False
+        End If
+        
+        ' ถ้าเจอช่องที่ยังไม่ได้กรอก ให้หยุดตรวจ ทำการแจ้งเตือน และกระโดดไปหาเซลล์นั้นทันที
+        If Not IsValid Then
+            MsgBox "โปรดระบุข้อมูลในช่องที่จำเป็นให้ครบถ้วนก่อนดำเนินการต่อค่ะ", vbCritical, "ข้อมูลไม่ครบถ้วน"
+            
+            ' ปลดล็อกชีทชั่วคราว (ถ้ามีการล็อกไว้) เพื่อส่ง Cursor ไปโฟกัสช่องที่ลืมกรอก
+            Application.Goto Cell
+            
+            IsQuotationFormComplete = False
+            Exit Function
+        End If
+    Next Cell
+
+    ' ถ้าผ่านทุกเงื่อนไข แปลว่ากรอกครบถ้วนเรียบร้อย
+    IsQuotationFormComplete = True
+End Function

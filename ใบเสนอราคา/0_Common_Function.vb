@@ -259,6 +259,12 @@ Public Sub SetSheetProtection(ByVal targetSheet As Worksheet, ByVal IsLock As Bo
     
 End Sub
 
+
+' ======================================================================================
+' SetWorkbookProtection: ฟังก์ชันสำหรับจัดการการล็อก/ปลดล็อกทั้ง Workbook
+' IsLock: True = ล็อก Workbook, False = ปลดล็อก Workbook  
+' เหมาะสำหรับสถานการณ์ที่คุณต้องการล็อกโครงสร้างของ Workbook เพื่อป้องกันการเพิ่ม/ลบ/ย้ายแผ่นงาน
+' ======================================================================================
 Public Sub SetWorkbookProtection(ByVal IsLock As Boolean)
     
      If IsLock Then
@@ -288,7 +294,7 @@ End Sub
 ' ---------- Sub Routine สำหรับรีเซ็ตระบบด้วยตนเอง ----------
 ' เหมาะสำหรับสถานการณ์ที่ระบบ Event หรือ Calculation มีปัญหา เช่น ค้าง, ไม่ตอบสนอง, หรือเกิดข้อผิดพลาดที่ทำให้ Excel อยู่ในสถานะไม่ปกติ
 ' =======================================================================================
-Sub ResetExcelEvents()
+Public Sub ResetExcelEvents()
     Application.EnableEvents = True
     Application.Calculation = xlCalculationAutomatic
 End Sub
