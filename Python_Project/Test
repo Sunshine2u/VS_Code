@@ -1,0 +1,25 @@
+import requests
+
+# 1. ตั้งค่า API ปลายทาง
+url = "https://mtinonmotorinsurance.muangthaiinsurance.com/Fire/BlockInquiry"
+headers = {
+    "Authorization": "Bearer ใส่_TOKEN_ของคุณตรงนี้",
+    "Content-Type": "application/json"
+}
+data_input = {
+    "province": "Bangkok",
+    "package_type": "Type_1"
+}
+
+# 2. ยิง API
+print("กำลังเรียก API...")
+response = requests.post(url, headers=headers, json=data_input)
+
+# 3. แสดงผลลัพธ์
+if response.status_code == 200:
+    result = response.json()
+    print("--- ผลลัพธ์ที่ได้ ---")
+    print("Success:", result.get("Success"))
+    print("Detail:", result.get("Detail"))
+else:
+    print(f"เชื่อมต่อไม่สำเร็จ รหัสสถานะ: {response.status_code}")
