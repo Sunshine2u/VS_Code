@@ -1,0 +1,106 @@
+import requests
+import urllib3
+import json
+from openpyxl import load_workbook  # 🛠️ เพิ่มไลบรารีจัดการ Excel
+
+# ปิดตัวแจ้งเตือน SSL เพื่อความลื่นไหลในการเชื่อมต่อ
+urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
+
+# ==========================================
+# STEP 1: ล็อกอินอัตโนมัติเพื่อเอา Token สดใหม่
+# ==========================================
+print("กำลังทำการล็อกอินเพื่อขอ Token...")
+
+login_url = "http://webservice27.muangthaiinsurance.com/MTIAuthentication.API/api/JWT" 
+
+login_headers = {
+    "Content-Type": "application/json",
+}
+
+login_payload = {
+    "username": "Sangchai9566",
+    "password": "lFc5QpE37oegO6n6"
+}
+
+login_response = requests.post(login_url, headers=login_headers, json=login_payload, verify=False)
+login_result = login_response.json()
+
+if login_response.status_code in [200, 202] and login_result.get("Success") == True:
+    
+    access_token = login_result.get("Token")
+    refresh_token = login_result.get("RefreshToken")
+    
+    print("🔑 ล็อกอินสำเร็จ! ได้รับ Token ตัวใหม่เรียบร้อยแล้ว\n")
+    
+    # ==========================================
+    # STEP 2: โหลดไฟล์ Excel และเริ่มยิง API วนลูป
+    # ==========================================
+    excel_file = "data.xlsx"  # ⚠️ ใส่ชื่อไฟล์ Excel ของคุณตรงนี้ (ไฟล์ควรอยู่ในโฟลเดอร์เดียวกับโค้ด)
+    
+    print(f"กำลังเปิดไฟล์ Excel: {excel_file} ...")
+    wb = load_workbook(excel_file)
+    sheet = wb.active  # ดึง Sheet แรกที่เปิดอยู่ขึ้นมาทำงาน
+    
+    main_url = "https://mtinonmotorinsurance.muangthaiinsurance.com/Fire/BlockInquiry"
+    
+    main_headers = {
+        "Authorization": f"Bearer {access_token}", 
+        "Content-Type": "application/json",
+        "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36"
+    }
+
+    # วนลูปอ่านข้อมูลตั้งแต่แถวที่ 2 เป็นต้นไป (แถวที่ 1 เป็นหัวตาราง)
+    # max_row คือคำสั่งให้วิ่งไปจบที่แถวสุดท้ายที่มีข้อมูลอัตโนมัติ
+    for row in range(2, sheet.max_row + 1):
+        
+        # 🟢 1. ดึงค่าออกจาก Excel มาเก็บในตัวแปร
+        # คอลัมน์ 1 = A (Latitude), คอลัมน์ 2 = B (Longitude)
+        lat_val = sheet.cell(row=row, column=1).value
+        lng_val = sheet.cell(row=row, column=2).value
+        
+        # ป้องกันกรณีเจอแถวว่างใน Excel ให้ข้ามไป
+        if lat_val is None or lng_val is None:
+            continue # ข้ามแถวนี้ไปเลยถ้าเจอค่าว่าง
+            
+        print(f"🔄 กำลังประมวลผลแถวที่ {row} -> พิกัด: {lat_val}, {lng_val}")
+        
+        # ประกอบร่างพารามิเตอร์ส่งไปหา API
+        data_input = {
+            "Latitude": str(lat_val),
+            "Longitude": str(lng_val)
+        }
+        
+        # ยิง API เส้นหลัก
+        response = requests.get(main_url, headers=main_headers, params=data_input, verify=False)
+        
+        if response.status_code == 200:
+            try: # พยายามแปลงผลลัพธ์เป็น JSON เพื่อดึงข้อมูลที่ต้องการมาเก็บไว้ในตัวแปร result_to_stamp
+                api_result = response.json()
+                
+                # ⚠️ สมมติว่าอยากบันทึกค่า "Detail" หรือข้อความบางอย่างจาก JSON กลับไป
+                # คุณสามารถระบุ Key ตามที่ API ตอบกลับมาได้เลย เช่น api_result.get("Detail")
+                # บรรทัดด้านล่างนี้แปลงโครงสร้างผลลัพธ์ทั้งหมดเป็นตัวอักษรเพื่อเอาไปสแตมป์เก็บไว้
+                result_to_stamp = json.dumps(api_result, ensure_ascii=False)
+                
+            except:
+                result_to_stamp = response.text
+                
+            print(f"   ✅ ดึงข้อมูลสำเร็จ")
+        else:
+            result_to_stamp = f"❌ Error: {response.status_code}"
+            print(f"   ❌ ดึงข้อมูลล้มเหลว: {response.status_code}")
+            
+        # 🔴 2. เอาผลลัพธ์กลับเข้าไป Stamp ที่ Excel (คอลัมน์ 3 = C)
+        sheet.cell(row=row, column=3).value = result_to_stamp
+
+    # ==========================================
+    # STEP 3: บันทึกข้อมูลกลับลงไฟล์ Excel
+    # ==========================================
+    print(f"\n💾 กำลังบันทึกผลลัพธ์กลับลงไฟล์ {excel_file}...")
+    wb.save(excel_file)
+    wb.close()
+    print("✨ บันทึกและสแตมป์ข้อมูลเสร็จสิ้นเรียบร้อยแล้ว!")
+
+else:
+    print(f"❌ ล็อกอินไม่สำเร็จ รหัสสถานะ: {login_response.status_code}")
+    print("ข้อความจากเซิร์ฟเวอร์:", login_response.text)

@@ -21,17 +21,18 @@ Public Const WorkbookLockSetting As Boolean = False 'ตั้งค่าให
 ' ======================================================================================
 
 ' Sub สำหรับล้างข้อมูล (Reset) ในแบบฟอร์มใบเสนอราคาหน้าหลัก
-Public Sub อยู่ดีมีสุข_Clear_Input()
+Public Sub A_Clear_Input_YooDeeMeeSuk()
     Dim QTSheet As Worksheet
     
     On Error GoTo ClearErrorHandler
+    
     Set QTSheet = ThisWorkbook.Worksheets("QT_อยู่ดีมีสุข")'<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<
     
     ' ปิดระบบ Event ชั่วคราวป้องกันการขัดจังหวะขณะล้างข้อมูลหลายๆ เซลล์พร้อมกัน
     Application.EnableEvents = False
 
     Call setSheetProtection(QTSheet, False) ' ปลดล็อก Sheet ชั่วคราวเพื่อให้สามารถแก้ไขเซลล์ได้
-    Call อยู่ดีมีสุข_Hide_Address_Rows() ' เปิดแถวที่อยู่ก่อนกรอกข้อมูล เพื่อความสวยงามของหน้าจอขณะทำงาน
+    Call A_Hide_Address_Rows_YooDeeMeeSuk ' เปิดแถวที่อยู่ก่อนกรอกข้อมูล เพื่อความสวยงามของหน้าจอขณะทำงาน
 
    With QTSheet
         
@@ -54,7 +55,6 @@ Public Sub อยู่ดีมีสุข_Clear_Input()
             .Range(cellName).Value = ""
         Next cellName
 
-
     End With
 
     Call SetSheetProtection(QTSheet, SheetLockSetting) ' ล็อก Sheet คืนตามค่าใน Const
@@ -76,41 +76,37 @@ End Sub
 ' Sub สำหรับเปิดหน้า Leaflet (แผ่นพับรายละเอียดความคุ้มครอง)
 ' ' ในกรณีที่แผ่นงานถูกซ่อนอยู่ จะทำการปลดล็อกโครงสร้างไฟล์เพื่อแสดงแผ่นงานนั้น และย้ายหน้าจอไปยังแผ่นงาน Leaflet
 ' =======================================================================================
-Sub อยู่ดีมีสุข_Go_To_Leaflet()
-    ' ปลดล็อกโครงสร้างไฟล์เพื่อให้สามารถเปลี่ยนสถานะการซ่อนของแผ่นงานได้
-    Call SetWorkbookProtection(False)
-
+Sub A_Go_To_Leaflet_YooDeeMeeSuk()
     Dim leafletSheet As Worksheet
     Set leafletSheet = ThisWorkbook.Worksheets("LL_อยู่ดีมีสุข") '<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<
     
-    'แสดงแผ่นงาน Leaflet (ที่อาจถูกซ่อนอยู่)
-    leafletSheet.Visible = True 
-    ' ย้ายหน้าจอไปยังแผ่นงานนั้น
-    leafletSheet.Activate 
+    Call SetWorkbookProtection(False) ' ปลดล็อกโครงสร้างไฟล์ชั่วคราว
+
+    leafletSheet.Visible = True ' แสดงแผ่นงาน Leaflet (ที่อาจถูกซ่อนอยู่)
+
+    leafletSheet.Activate     ' ย้ายหน้าจอไปยังแผ่นงานนั้น
     
-    ' ล็อกโครงสร้างไฟล์คืน เพื่อป้องกันการลบหรือสลับลำดับแผ่นงาน
-    Call SetWorkbookProtection(WorkbookLockSetting)
+    Call SetWorkbookProtection(WorkbookLockSetting) ' ล็อกโครงสร้างไฟล์คืนตามค่าใน Const
 End Sub
 
 ' ======================================================================================
 ' Sub สำหรับปิดหน้า Leaflet และกลับมายังหน้าใบเสนอราคาหลัก
 ' เมื่อผู้ใช้ปิดแผ่นพับรายละเอียดความคุ้มครอง จะทำการปลดล็อกโครงสร้างไฟล์เพื่อซ่อนแผ่นงาน Leaflet อีกครั้ง และย้ายหน้าจอกลับไปยังหน้าใบเสนอราคาหลัก
 ' ======================================================================================
-Sub อยู่ดีมีสุข_Close_Leafltet()
+Sub A_Close_Leaflet_YooDeeMeeSuk()
     ' ปลดล็อกโครงสร้างไฟล์
+
+    Dim leafletSheet As Worksheet, QTSheet As Worksheet
+
     Call SetWorkbookProtection(False) ' ปลดล็อกโครงสร้างไฟล์ชั่วคราว
-    Dim leafletSheet As Worksheet
-    Dim QTSheet As Worksheet
 
     Set leafletSheet = ThisWorkbook.Worksheets("LL_อยู่ดีมีสุข") '<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<
     Set QTSheet = ThisWorkbook.Worksheets("QT_อยู่ดีมีสุข") '<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<
 
-    ' ซ่อนแผ่นงาน Leaflet
-    leafletSheet.Visible = False
-    ' กลับมายังหน้าคีย์ข้อมูลใบเสนอราคา
-    QTSheet.Activate
+    leafletSheet.Visible = False ' ซ่อนแผ่นงาน Leaflet อีกครั้ง
+
+    QTSheet.Activate ' 
     
-    ' ล็อกโครงสร้างไฟล์คืน
     Call SetWorkbookProtection(WorkbookLockSetting) 'ล็อกโครงสร้างไฟล์คืน
 End Sub
 
@@ -122,16 +118,15 @@ End Sub
 ' Sub สำหรับแสดงตัวอย่างใบเสนอราคา (Print Preview) ก่อนพิมพ์จริง
 ' จะตรวจสอบเงื่อนไขพื้นที่เสี่ยงภัยน้ำท่วมและความถูกต้องของทุนประกันก่อน หากผ่านถึงจะปลดล็อกโครงสร้างไฟล์เพื่อแสดงหน้าสรุป (Report) ชั่วคราวสำหรับทำ Print Preview
 ' =======================================================================================
-Sub อยู่ดีมีสุข_Preview_Quotation()
-    Dim QTSheet As Worksheet
-    Dim QTRSheet As Worksheet
+Sub A_Quotation_Preview_YooDeeMeeSuk()
+    Dim QTSheet As Worksheet, QTRSheet As Worksheet
+    Dim PremRange As Range
     Dim ProvName As String
     Dim PremVal As Double
-    Dim PremRange As Range
 
     Set QTSheet = ThisWorkbook.Worksheets("QT_อยู่ดีมีสุข") '<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<
     Set QTRSheet = ThisWorkbook.Worksheets("QTR_อยู่ดีมีสุข") '<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<
-    Set PremRange = GetListRange(Sheet3, 1, "ทุนประกันภัย") '<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<
+    Set PremRange = GetListRange(ThisWorkbook.Worksheets("CF_อยู่ดีมีสุข"), 1, "ทุนประกันภัย") '<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<
     ProvName = QTSheet.Range("H28").Value '<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<
     PremVal = QTSheet.Range("G43").Value '<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<
     
@@ -144,56 +139,27 @@ Sub อยู่ดีมีสุข_Preview_Quotation()
     End If
 
     ' 2. ตรวจสอบเงื่อนไขความถูกต้องของทุนประกัน (แยกออกมาเป็นอีก If หนึ่ง ไม่ซ้อนกัน)
-    ' ส่งค่าจาก G43 เข้าไปตรวจสอบในฟังก์ชัน IsPremiumValid ที่เราปรับปรุงไว้
     If Not IsPremiumValid(PremVal, PremRange) Then
         Exit Sub ' ถ้าฟังก์ชันคืนค่า False (ทุนไม่ตรงแผน) จะหยุดทำงานทันทีพร้อมแจ้งเตือนจากในฟังก์ชันเอง
     End If
 
+    ' 3. ตรวจสอบเงื่อนไขความครบถ้วนของแบบฟอร์มใบเสนอราคา (แยกออกมาเป็นอีก If หนึ่ง ไม่ซ้อนกัน)
     If Not IsQuotationFormComplete(QTSheet) Then
         Exit Sub ' ถ้าฟังก์ชันคืนค่า False (ทุนไม่ตรงแผน) จะหยุดทำงานทันทีพร้อมแจ้งเตือนจากในฟังก์ชันเอง
     End If
     
     ' --- หากผ่านทั้ง 3 ด่านด้านบน ถึงจะเริ่มกระบวนการ Preview ---
-
-    ' ปลดล็อกโครงสร้างไฟล์
     Call SetWorkbookProtection(False)
 
-    ' แสดงหน้าสรุป (Report) ชั่วคราวเพื่อใช้ในการทำ Print Preview
-    QTRSheet.Visible = True 
+    QTRSheet.Visible = True ' แสดงหน้าสรุป (Report) ชั่วคราวเพื่อใช้ในการทำ Print Preview
     
-    ' เปิดหน้าต่าง Preview
-    QTRSheet.PrintPreview
+    QTRSheet.PrintPreview ' เปิดหน้าต่าง Print Preview ให้ผู้ใช้ดูตัวอย่างก่อนพิมพ์จริง
+
+    QTRSheet.Visible = False ' ซ่อนหน้าสรุปอีกครั้งหลังจากดูตัวอย่างเสร็จแล้ว
     
-    ' ซ่อนหน้าสรุปกลับคืน
-    QTRSheet.Visible = False
+    QTSheet.Activate    ' กลับมายังหน้าคีย์ข้อมูลหลัก
     
-    ' กลับมายังหน้าคีย์ข้อมูลหลัก
-    QTSheet.Activate
-    
-    ' ล็อกโครงสร้างไฟล์คืน
-    Call SetWorkbookProtection(WorkbookLockSetting)
-End Sub
-
-'========================================================================================
-' Sub สำหรับซ่อนแถวกรณีที่มีการเลือกที่อยู่รับเอกสารเป็นที่เดียวกับที่อยู่เอาประกัน (F55)
-'=========================================================================================
-
-Sub อยู่ดีมีสุข_Hide_Address_Rows(Optional flag As Boolean = False)
-    Dim QTSheet As Worksheet
-    Dim Checkbox As Range
-    Dim HiddingRows As Range
-
-    Set QTSheet = ThisWorkbook.Worksheets("QT_อยู่ดีมีสุข") '<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<
-    Set Checkbox = QTSheet.Range("F55") '<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<
-    Set HiddingRows = QTSheet.Rows("56:61") '<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<
-
-    Call SetSheetProtection(QTSheet, False) ' ปลดล็อก Sheet ชั่วคราว
-    If Checkbox.Value = True  Then
-        HiddingRows.Hidden = True
-    Else
-        HiddingRows.Hidden = False
-    End If
-    Call SetSheetProtection(QTSheet, SheetLockSetting) ' ล็อก Sheet คืนตามค่าใน Const
+    Call SetWorkbookProtection(WorkbookLockSetting) ' ล็อกโครงสร้างไฟล์คืนตามค่าใน Const
 End Sub
 
 
@@ -202,22 +168,18 @@ End Sub
 ' จะตรวจสอบเงื่อนไขพื้นที่เสี่ยงภัยน้ำท่วมและความถูกต้องของทุนประกันก่อน หากผ่านถึงจะปลดล็อกโครงสร้างไฟล์เพื่อแสดงหน้าสรุป (Report) ชั่วคราวสำหรับทำการ Export เป็น PDF
 ' หลังจาก Export เสร็จจะล็อกโครงสร้างไฟล์คืนและซ่อนหน้าสรุปอีกครั้งเพื่อป้องกันการแก้ไขข้อมูลในหน้าสรุปโดยไม่ตั้งใจ
 ' =======================================================================================
-Public Sub อยู่ดีมีสุข_Get_Quotation()
-    Dim QTSheet As Worksheet
-    Dim QTRSheet As Worksheet
-    Dim filePath As String, fileName As String
-    Dim ProvName As String
-    Dim PremVal As Double
+Public Sub A_Get_Quotation_YooDeeMeeSuk()
+    Dim QTSheet As Worksheet, QTRSheet As Worksheet
     Dim PremRange As Range
-    Dim QTNumber As String
-
+    Dim filePath As String, fileName As String, ProvName As String, QTNumber As String
+    Dim PremVal As Double
+    
     Set QTSheet = ThisWorkbook.Worksheets("QT_อยู่ดีมีสุข") '<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<
     Set QTRSheet = ThisWorkbook.Worksheets("QTR_อยู่ดีมีสุข") '<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<
-    Set PremRange = GetListRange(Sheet3, 1, "ทุนประกันภัย") '<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<
+    Set PremRange = GetListRange(ThisWorkbook.Worksheets("CF_อยู่ดีมีสุข"), 1, "ทุนประกันภัย") '<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<
     ProvName = QTSheet.Range("H28").Value '<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<
     PremVal = QTSheet.Range("G43").Value '<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<
     QTNumber = QTSheet.Range("G58").Value '>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
-
 
     ' 1. ตรวจสอบเงื่อนไขจังหวัดน้ำท่วมก่อน
     If IsFloodRisk(ProvName) Then
@@ -228,7 +190,6 @@ Public Sub อยู่ดีมีสุข_Get_Quotation()
     End If
 
     ' 2. ตรวจสอบเงื่อนไขความถูกต้องของทุนประกัน (แยกออกมาเป็นอีก If หนึ่ง ไม่ซ้อนกัน)
-    ' ส่งค่าจาก G43 เข้าไปตรวจสอบในฟังก์ชัน IsPremiumValid ที่เราปรับปรุงไว้
     If Not IsPremiumValid(PremVal, PremRange) Then 
         Exit Sub ' ถ้าฟังก์ชันคืนค่า False (ทุนไม่ตรงแผน) จะหยุดทำงานทันทีพร้อมแจ้งเตือนจากในฟังก์ชันเอง
     End If
@@ -237,37 +198,69 @@ Public Sub อยู่ดีมีสุข_Get_Quotation()
         Exit Sub ' ถ้าฟังก์ชันคืนค่า False (ทุนไม่ตรงแผน) จะหยุดทำงานทันทีพร้อมแจ้งเตือนจากในฟังก์ชันเอง
     End If
 
-    ' ปลดล็อก Workbook เพื่อให้สามารถทำงานต่อได้
     Call SetWorkbookProtection(False)
-    
-    QTRSheet.Visible = True
-    
+    QTRSheet.Visible = True ' แสดงหน้าใบเสนอราคาชั่วคราวเพื่อใช้ในการทำ Export เป็น PDF
     On Error GoTo ErrorHandler
  
-    
     ' 1. กำหนดชื่อและที่เก็บไฟล์
     fileName = "ใบเสนอราคา_อยู่ดีมีสุข_" & Format(Now, "yyyy-mm-dd_hhmm") & QTNumber & ".pdf" 
     filePath = ThisWorkbook.Path & "\" & fileName
     
-    ' 2. คำสั่ง Export เป็น PDF
-    QTRSheet.ExportAsFixedFormat _
-        Type:=xlTypePDF, _
-        fileName:=filePath, _
-        Quality:=xlQualityStandard, _
-        IncludeDocProperties:=True, _
-        IgnorePrintAreas:=False, _
-        OpenAfterPublish:=True
+    ' ==========================================================================================
+    ' 2. คำสั่งตรวจสอบเวอร์ชันก่อนดำเนินการ Export เป็น PDF
+    ' ==========================================================================================
+    If Val(Application.Version) < 12 Then
+        ' -------------------------------------------------------------------------
+        ' ❌ กรณีเป็น Excel 2003 (เวอร์ชัน 11 ลงไป) : ไม่มีคำสั่งสร้าง PDF ในตัว
+        ' -------------------------------------------------------------------------
+        
+        Call FreezExcelScreen(False) ' ปลดล็อกหน้าจอชั่วคราวเพื่อให้ระบบเปิด Print Preview ได้
+        
+        MsgBox "เนื่องจากคุณกำลังใช้งาน Excel 2003 (หรือเก่ากว่า) ซึ่งระบบยังไม่รองรับการแปลงไฟล์เป็น PDF ในตัว" & vbCrLf & _
+               "ระบบจะทำการเปิดหน้าต่าง 'พิมพ์ตัวอย่าง (Print Preview)' เพื่อให้คุณสั่งพิมพ์ออกทางเครื่องพิมพ์แทนค่ะ", _
+               vbInformation, "แจ้งเตือนเวอร์ชัน Excel"
+               
+        QTRSheet.PrintPreview ' ใช้คำสั่ง PrintPreview แบบดั้งเดิมที่รันได้ตั้งแต่ Excel ยุคแรกสุด
+        
+    Else
+        ' -------------------------------------------------------------------------
+        ' ✅ กรณีเป็น Excel 2007 ขึ้นไป (เวอร์ชัน 12+)
+        ' -------------------------------------------------------------------------
+        On Error Resume Next ' 🌟 ดักจับเผื่อเป็น 2007 รุ่นเก่าที่ไม่มีระบบ PDF
+        
+        QTRSheet.ExportAsFixedFormat _
+            Type:=xlTypePDF, _
+            fileName:=filePath, _
+            Quality:=xlQualityStandard, _
+            IncludeDocProperties:=True, _
+            IgnorePrintAreas:=False, _
+            OpenAfterPublish:=True
         
         QTSheet.Activate ' กลับมายังหน้าคีย์ข้อมูลหลัก
-        ' แจ้งเตือนเมื่อสำเร็จ
-    MsgBox "บันทึกไฟล์ PDF เรียบร้อยแล้วที่: " & vbCrLf & filePath, vbInformation, "สำเร็จ"
-
+        
+        ' ตรวจสอบว่าคำสั่งเซฟ PDF ทำงานสำเร็จหรือไม่?
+        If Err.Number <> 0 Then
+            ' ❌ ถ้าเกิด Error แปลว่าเป็น 2007 รุ่นเก่า (ไม่มี SP2) หรือสิทธิ์ในเครื่องโดนบล็อก
+            Err.Clear
+            Call FreezExcelScreen(False) ' คลายล็อกหน้าจอ
+            
+            MsgBox "ระบบตรวจพบว่า Excel 2007 ของคุณยังไม่ได้อัปเดตเป็น Service Pack 2 (SP2)" & vbCrLf & _
+                   "ทำให้ไม่สามารถสร้างไฟล์ PDF ได้โดยตรง ระบบจะเปลี่ยนไปเปิดหน้าต่างพิมพ์แทนค่ะ", _
+                   vbExclamation, "แจ้งเตือนเวอร์ชันย่อย Excel"
+                   
+            QTRSheet.PrintPreview ' ส่งไปหน้าตัวอย่างก่อนพิมพ์แทน
+        Else
+            ' ✅ ถ้าไม่มี Error แปลว่าเซฟ PDF สำเร็จแล้ว เปิดไฟล์ให้ดูเรียบร้อย
+            ' ไม่มีอะไรต้องทำเพิ่ม เพราะคำสั่ง ExportAsFixedFormat มีคำสั่ง OpenAfterPublish:=True อยู่แล้ว 
+            MsgBox "บันทึกไฟล์ PDF เรียบร้อยแล้วที่: " & vbCrLf & filePath, vbInformation, "สำเร็จ" ' แจ้งเตือนเมื่อสำเร็จ
+        End If
+        On Error GoTo ErrorHandler ' คืนค่าตัวดักจับข้อผิดพลาดหลักของระบบ
+    End If
 
 ' ส่วนนี้จะทำงานเสมอไม่ว่าจะสำเร็จหรือ Error เพื่อล็อกไฟล์คืน
 Finalize:
     QTRSheet.Visible = False
     Call SetWorkbookProtection(WorkbookLockSetting)
-
     Exit Sub
 
 ErrorHandler:
@@ -275,72 +268,79 @@ ErrorHandler:
     Resume Finalize ' สั่งให้กลับไปล็อกไฟล์ที่ Finalize ก่อนจบโปรแกรม
 End Sub
 
+'========================================================================================
+' Sub สำหรับซ่อนแถวกรณีที่มีการเลือกที่อยู่รับเอกสารเป็นที่เดียวกับที่อยู่เอาประกัน (F55)
+'=========================================================================================
+
+Sub A_Hide_Address_Rows_YooDeeMeeSuk()
+    Dim Checkbox As Range, HiddingRows As Range
+   
+    Set Checkbox = ActiveSheet.Range("F55") '<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<
+    Set HiddingRows = ActiveSheet.Rows("56:61") '<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<
+
+    Call FreezExcelScreen(True) ' ปิดการอัปเดตหน้าจอชั่วคราวเพื่อป้องกันการกระพริบของหน้าจอขณะซ่อนแถว
+    Call SetSheetProtection(ActiveSheet, False) ' ปลดล็อก Sheet ชั่วคราว
+    
+    If Checkbox.Value = True  Then
+        HiddingRows.Hidden = True
+    Else
+        HiddingRows.Hidden = False
+    End If
+
+    Call FreezExcelScreen(False) ' เปิดการอัปเดตหน้าจออีกครั้งหลังจากซ่อนแถวเสร็จ
+    Call SetSheetProtection(ActiveSheet, SheetLockSetting) ' ล็อก Sheet คืนตามค่าใน Const
+End Sub
+
 ' ======================================================================================
 ' ส่วนที่ 4: ฟังก์ชันเสริมและระบบตรวจสอบ (Utilities & Validations)
 ' ======================================================================================
-' Function สำหรับรีเซ็ตสถานะของ Excel (Event และการคำนวณอัตโนมัติ)
-' มักเรียกใช้หลังจากจบ Sub ใหญ่ๆ หรือเมื่อระบบเกิดข้อผิดพลาด
-Public Function ResetExcelEvents() As Boolean
-    On Error GoTo ErrorHandler
-    ' เปิดการทำงานของ Event (เช่น การตรวจจับการแก้ไขเซลล์)
-    Application.EnableEvents = True
-    ' ตั้งค่าการคำนวณสูตรให้เป็นแบบอัตโนมัติ (Automatic Calculation)
-    Application.Calculation = xlCalculationAutomatic
-    ' คืนค่าผลลัพธ์เป็น True เพื่อแจ้งว่ารีเซ็ตสำเร็จ
-    ResetExcelEvents = True
-    Exit Function
-ErrorHandler:
-    ResetExcelEvents = False
-End Function
 
 ' ======================================================================================
 ' CheckAndSuggestPremium: ซับรูทีนสำหรับเขียนคำแนะนำลงหน้าชีท
 ' วัตถุประสงค์: ให้คำแนะนำทันทีที่ผู้ใช้พิมพ์ทุนเสร็จ (พิมพ์ปุ๊บ ข้อความขึ้นปั๊บ)
 ' ======================================================================================
 Public Sub CheckAndSuggestPremium(ByVal totalVal As Double)
+    
+    Dim QTSheet As Worksheet, CFSheet As Worksheet
+    Dim PremiumRange As Range, NoticeCell As Range
     Dim valResult As Variant
-    Dim QTSheet As Worksheet
-    Dim CFSheet As Worksheet: 
-    Dim PremiumRange As Range:
-    Dim lastRow As Long, ColPremium As Long: 
+    Dim lastRow As Long, ColPremium As Long
     
     Set QTSheet = ThisWorkbook.Worksheets("QT_อยู่ดีมีสุข")'<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<
     Set CFSheet = ThisWorkbook.Worksheets("CF_อยู่ดีมีสุข") '<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<
+    Set NoticeCell = QTSheet.Range("J43") ' เซลล์สำหรับแสดงข้อความคำแนะนำใต้ช่องทุนประกันภัย (ปรับตามจริงได้)<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<
     ColPremium = 1 ' สมมติว่าตารางทุนประกันภัยอยู่ในคอลัมน์ A (ปรับตามจริงได้)'<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<
+
 
     ' กำหนดช่วงข้อมูลของตารางทุนประกันภัย (สมมติอยู่ในคอลัมน์ A-B ของ CF_อยู่ดีมีสุข)
     lastRow = CFSheet.Cells(CFSheet.Rows.count, ColPremium).End(xlUp).Row
     Set PremiumRange = CFSheet.Range(CFSheet.Cells(2, ColPremium), CFSheet.Cells(lastRow, ColPremium))
 
-    ' เรียกใช้ Logic กลาง
-    valResult = GetPackageValidation(totalVal, PremiumRange)
+    valResult = GetPackageValidation(totalVal, PremiumRange) ' เรียกใช้ Logic กลาง
     
-    ' ปลดล็อกชีทก่อนแก้ไข (ถ้ามีการป้องกันไว้)
-    Call SetSheetProtection(QTSheet, False)
-    
-    ' เลือกจัดการข้อความในเซลล์ J43 ตามผลลัพธ์
-    Select Case valResult(1)
+    Call SetSheetProtection(QTSheet, False) ' ปลดล็อกชีทชั่วคราวเพื่อให้สามารถเขียนข้อความลงเซลล์ได้
+
+    Select Case valResult(1) ' valResult(1) คือสถานะการตรวจสอบที่ฟังก์ชัน GetPackageValidation คืนค่าออกมา (Valid, OutOfRange, Invalid)
         Case "Valid"
             ' --- กรณีถูกต้อง ---
             ' ล้างข้อความเตือนเดิมทิ้งให้สะอาด
-            QTSheet.Range("J43:L43").ClearContents
+            NoticeCell.MergeArea.ClearContents
             
         Case "OutOfRange"
             ' --- กรณีหลุดขอบเขต ---
             ' เขียนบอกช่วงที่ถูกต้อง และเปลี่ยนตัวอักษรเป็นสีแดงเพื่อเตือน
-            QTSheet.Range("J43").Value = "**ต้องอยู่ระหว่าง " & Format(valResult(4), "#,##0") & _
+            NoticeCell.Value = "**ต้องอยู่ระหว่าง " & Format(valResult(4), "#,##0") & _
                                          " ถึง " & Format(valResult(5), "#,##0")
-            QTSheet.Range("J43").Font.Color = vbRed
+            NoticeCell.Font.Color = vbRed
             
         Case "Invalid"
             ' --- กรณีไม่ตรงแผนเป๊ะ ---
             ' เขียนบอกแผนที่แนะนำ และเปลี่ยนเป็นสีน้ำเงินให้ดูเป็นคำแนะนำ (ไม่ใช่ข้อผิดพลาดร้ายแรง)
-            QTSheet.Range("J43").Value = "** แนะนำ: " & Format(valResult(2), "#,##0") & _
+            NoticeCell.Value = "** แนะนำ: " & Format(valResult(2), "#,##0") & _
                                          " หรือ " & Format(valResult(3), "#,##0")
-            QTSheet.Range("J43").Font.Color = vbBlue
+            NoticeCell.Font.Color = vbBlue
     End Select
-    
-    ' ล็อกชีทกลับคืนหลังทำงานเสร็จ
+
     Call SetSheetProtection(QTSheet, SheetLockSetting)
 End Sub
 
@@ -521,6 +521,7 @@ Public Function IsQuotationFormComplete(ByVal TargetSheet As Worksheet) As Boole
     ' อ้างอิงจากเครื่องหมายดอกจันสีแดง (*) บนหน้าจอ "เมืองไทยอยู่ดีมีสุข"
     
     Dim RequiredFields As Range
+    
     With TargetSheet
         Set RequiredFields = Union( _
             .Range("G24"), _

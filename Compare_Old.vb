@@ -1,58 +1,44 @@
-Public Sub อยู่ดีมีสุข_Clear_Input()
-    Dim QTSheet As Worksheet
-    Dim i As Long
-    
-    On Error GoTo ClearErrorHandler
-    Set QTSheet = ThisWorkbook.Worksheets("QT_อยู่ดีมีสุข") '<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<
-    
-    ' ปิดระบบ Event ชั่วคราวป้องกันการขัดจังหวะขณะล้างข้อมูลหลายๆ เซลล์พร้อมกัน
-    Application.EnableEvents = False
-    
-    With QTSheet
-        ' ปลดล็อกแผ่นงาน
-        .Unprotect Password:=myPassword
+' ==========================================================================================
+    ' 2. คำสั่งตรวจสอบเวอร์ชันก่อนดำเนินการ Export เป็น PDF
+    ' ==========================================================================================
+    If Val(Application.Version) < 12 Then
+        ' -------------------------------------------------------------------------
+        ' ❌ กรณีเป็น Excel 2003 (เวอร์ชัน 11 ลงไป) : ไม่มีคำสั่งสร้าง PDF ในตัว
+        ' -------------------------------------------------------------------------
         
-        ' แก้ไขปัญหา Merged Cells พังด้วยการรวบรวม Address และล้างทีละส่วนอย่างเป็นระบบ
-        ' แบ่งชุดเซลล์ที่ไม่มีปัญหาในการล้างด้วย ClearContents ออกเป็นกลุ่มๆ
-        ' (แนะนำให้เขียนแยกกลุ่มแบบนี้ เพื่อให้อ่านและปรับปรุงโค้ดได้ง่าย ไม่เกิด Syntax Error)
+        Call FreezExcelScreen(False) ' ปลดล็อกหน้าจอชั่วคราวเพื่อให้ระบบเปิด Print Preview ได้
         
-        ' กลุ่ม 1: ข้อมูลผู้เอาประกัน และ ที่อยู่จัดส่ง
-        .Range("G24:M26,H28,J28,L28").MergeArea.ClearContents
+        MsgBox "เนื่องจากคุณกำลังใช้งาน Excel 2003 (หรือเก่ากว่า) ซึ่งระบบยังไม่รองรับการแปลงไฟล์เป็น PDF ในตัว" & vbCrLf & _
+               "ระบบจะทำการเปิดหน้าต่าง 'พิมพ์ตัวอย่าง (Print Preview)' เพื่อให้คุณสั่งพิมพ์ออกทางเครื่องพิมพ์แทนค่ะ", _
+               vbInformation, "แจ้งเตือนเวอร์ชัน Excel"
+               
+        QTRSheet.PrintPreview ' ใช้คำสั่ง PrintPreview แบบดั้งเดิมที่รันได้ตั้งแต่ Excel ยุคแรกสุด
         
-        ' กลุ่ม 2: ข้อมูลสิ่งปลูกสร้าง/ทรัพย์สิน
-        .Range("G41:I41,G42:H42,L41:N41").MergeArea.ClearContents
+    Else
+        ' -------------------------------------------------------------------------
+        ' ✅ กรณีเป็น Excel 2007 ขึ้นไป (เวอร์ชัน 12+)
+        ' -------------------------------------------------------------------------
+        On Error Resume Next ' 🌟 ดักจับเผื่อเป็น 2007 รุ่นเก่าที่ไม่มีระบบ PDF
         
-        ' กลุ่ม 3: ข้อมูลรายละเอียดและส่วนควบอื่นๆ (ล้างข้อมูลที่ระบุในโค้ดต้นฉบับเดิมของคุณ)
-        Dim targetRanges As Variant
-        targetRanges = Array("G31:H33", "H35:H36", "L35:L38", "G45:J45", "G49:M49", _
-                             "H51", "J51", "L51", "H53", "J53", "L53", "G57:M57", _
-                             "H59", "J59", "L59", "H61", "G64:I64", "L64:M64", _
-                             "G66:I66", "G68:H68")
-                             
-        ' วนลูปเพื่อใช้คำสั่งล้างข้อมูลผ่าน .MergeArea เพื่อความปลอดภัยกับ Merged Cells 100%
-        For i = LBound(targetRanges) To UBound(targetRanges)
-            .Range(targetRanges(i)).MergeArea.ClearContents
-        Next i
-        
-        ' ล็อกแผ่นงานคืนกลับ
-        .Protect Password:=myPassword
-    End With
-    
-    MsgBox "ล้างข้อมูลหน้าแบบฟอร์มเรียบร้อยแล้ว", vbInformation, "ล้างข้อมูล"
-
-ClearSafeExit:
-    Application.EnableEvents = True
-        ' เรียกฟังก์ชันรีเซ็ตค่าระบบเสริม เพื่อให้มั่นใจว่า Excel กลับมาอยู่ในสถานะพร้อมทำงานปกติ
-    Call ResetExcelEvents
-    
-    ' จบการทำงานของ Sub หลัก (ป้องกันไม่ให้โค้ดไหลไปทำงานใน ErrorHandler)
-    Exit Sub
-
-    
-
-ClearErrorHandler:
-    MsgBox "เกิดข้อผิดพลาดขณะล้างข้อมูล: " & Err.Description, vbCritical, "Error"
-    ' เปิดระบบคืนทุกครั้งแม้โค้ดจะทำงานผิดพลาด
-    If Not QTSheet Is Nothing Then QTSheet.Protect Password:=myPassword
-    Application.EnableEvents = True
-End Sub
+        QTRSheet.ExportAsFixedFormat _
+            Type:=xlTypePDF, _
+            fileName:=filePath, _
+            Quality:=xlQualityStandard, _
+            IncludeDocProperties:=True, _
+            IgnorePrintAreas:=False, _
+            OpenAfterPublish:=True
+            
+        ' ตรวจสอบว่าคำสั่งเซฟ PDF ทำงานสำเร็จหรือไม่?
+        If Err.Number <> 0 Then
+            ' ❌ ถ้าเกิด Error แปลว่าเป็น 2007 รุ่นเก่า (ไม่มี SP2) หรือสิทธิ์ในเครื่องโดนบล็อก
+            Err.Clear
+            Call FreezExcelScreen(False) ' คลายล็อกหน้าจอ
+            
+            MsgBox "ระบบตรวจพบว่า Excel 2007 ของคุณยังไม่ได้อัปเดตเป็น Service Pack 2 (SP2)" & vbCrLf & _
+                   "ทำให้ไม่สามารถสร้างไฟล์ PDF ได้โดยตรง ระบบจะเปลี่ยนไปเปิดหน้าต่างพิมพ์แทนค่ะ", _
+                   vbExclamation, "แจ้งเตือนเวอร์ชันย่อย Excel"
+                   
+            QTRSheet.PrintPreview ' ส่งไปหน้าตัวอย่างก่อนพิมพ์แทน
+        End If
+        On Error GoTo ErrorHandler ' คืนค่าตัวดักจับข้อผิดพลาดหลักของระบบ
+    End If

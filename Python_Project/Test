@@ -1,25 +1,95 @@
 import requests
+import urllib3
+import json
 
-# 1. ตั้งค่า API ปลายทาง
-url = "https://mtinonmotorinsurance.muangthaiinsurance.com/Fire/BlockInquiry"
-headers = {
-    "Authorization": "Bearer ใส่_TOKEN_ของคุณตรงนี้",
-    "Content-Type": "application/json"
+
+# ปิดตัวแจ้งเตือน SSL เพื่อความลื่นไหลในการเชื่อมต่อ
+urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
+
+# ==========================================
+# STEP 1: ล็อกอินอัตโนมัติเพื่อเอา Token สดใหม่
+# ==========================================
+print("กำลังทำการล็อกอินเพื่อขอ Token...")
+
+# ⚠️ เปลี่ยน URL ตรงนี้ให้เป็นลิงก์สำหรับ Login/Authen ของคุณนะครับ
+login_url = "http://webservice27.muangthaiinsurance.com/MTIAuthentication.API/api/JWT" 
+
+login_headers = {
+    "Content-Type": "application/json",
 }
-data_input = {
-    "province": "Bangkok",
-    "package_type": "Type_1"
+
+# ⚠️ ใส่ Username และ Password ของคุณตรงนี้เพื่อใช้ล็อกอิน
+# แก้ไขจุดนี้: เอาตัว พินทุ ( ฺ ) ออกแล้ว
+login_payload = {
+    "username": "Sangchai9566",
+    "password": "lFc5QpE37oegO6n6"
 }
 
-# 2. ยิง API
-print("กำลังเรียก API...")
-response = requests.post(url, headers=headers, json=data_input)
+# สั่งยิงไปล็อกอิน
+login_response = requests.post(login_url, headers=login_headers, json=login_payload, verify=False)
 
-# 3. แสดงผลลัพธ์
-if response.status_code == 200:
-    result = response.json()
-    print("--- ผลลัพธ์ที่ได้ ---")
-    print("Success:", result.get("Success"))
-    print("Detail:", result.get("Detail"))
-else:
-    print(f"เชื่อมต่อไม่สำเร็จ รหัสสถานะ: {response.status_code}")
+# ดึงข้อมูล JSON ออกมาก่อนเพื่อเอาไปเช็คเงื่อนไข
+login_result = login_response.json()
+
+# แก้ไขจุดนี้: เช็คจากค่า Success ใน JSON หรือรหัสสถานะที่เป็น 200 หรือ 202
+if login_response.status_code in [200, 202] and login_result.get("Success") == True:
+    
+    # ดึงค่า Token และ RefreshToken ล่าสุดมาเก็บไว้ในตัวแปร Python อัตโนมัติ
+    access_token = login_result.get("Token")
+    refresh_token = login_result.get("RefreshToken")
+    
+    print("🔑 ล็อกอินสำเร็จ! ได้รับ Token ตัวใหม่เรียบร้อยแล้ว")
+    print (f"Access Token: {access_token}")
+    print (f"Refresh Token: {refresh_token}")
+    
+    # ==========================================
+    # STEP 2: เอา Token ที่ได้ไปยิงดึงข้อมูลต่อทันที
+    # ==========================================
+    print("\nกำลังเรียก API เส้นหลัก (BlockInquiry)...")
+    
+    main_url = "https://mtinonmotorinsurance.muangthaiinsurance.com/Fire/BlockInquiry"
+    
+    main_headers = {
+        "Authorization": f"Bearer {access_token}", # เอาตัวแปร Token จากสเต็ปแรกมาใส่ตรงนี้
+        "Content-Type": "application/json",
+        "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36"
+    }
+    
+    data_input = {
+        "Latitude":"13.759752",
+        "Longitude":"100.6179722"
+    }
+    
+      # ==========================================
+    # STEP 2: เอา Token ที่ได้ไปยิงดึงข้อมูลต่อทันที
+    # ==========================================
+    print("\nกำลังเรียก API เส้นหลัก (BlockInquiry)...")
+    
+    main_url = "https://mtinonmotorinsurance.muangthaiinsurance.com/Fire/BlockInquiry"
+    
+    main_headers = {
+        "Authorization": f"Bearer {access_token}", 
+        "Content-Type": "application/json",
+        "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36"
+    }
+    
+    # ดึงพารามิเตอร์ออกมาแยกต่างหาก
+    data_input = {
+        "Latitude": "13.759752",
+        "Longitude": "100.6179722"
+    }
+    
+    # 🛠️ แก้ไขจุดนี้: ใช้ requests.get และเปลี่ยนจาก data=... เป็น params=data_input
+    response = requests.get(main_url, headers=main_headers, params=data_input, verify=False)
+    
+    print(response)
+    print(f"รหัสสถานะที่ได้กลับมา: {response.status_code}")
+    
+    if response.status_code == 200:
+        print("--- ผลลัพธ์ที่ได้ ---")
+        try:
+            print(response.json())
+        except:
+            print(response.text)
+    else:
+        print("ข้อความดิบจากเซิร์ฟเวอร์:", response.text)
