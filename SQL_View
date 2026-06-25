@@ -1,0 +1,12 @@
+SELECT
+I26CPROVID as ProvinceId
+, I26CAMPURID as DistrictId
+, I05CADBLOCK as BlockName
+, case
+    when I26CPROVID='00' then LEFT([I05CADBLOCK], CHARINDEX(' ', [I05CADBLOCK] + ' ') - 1)
+    else I26CPROVID+I26CAMPURID+LEFT([I05CADBLOCK], CHARINDEX(' ', [I05CADBLOCK] + ' ') - 1)
+end as BlockCode
+, case when I05CADBLOCK like '%เขตอันตราย%' then 1 else 0 end as BlockDangerous
+FROM [GEO_MAP].[dbo].[GEO_BLOCK]
+Block Code.xlsx
+ 

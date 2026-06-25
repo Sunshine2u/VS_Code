@@ -5,7 +5,8 @@
 ' โดยมีการจัดการทั้งในส่วนของการล้างข้อมูล, การนำทางไปยังแผ่นพับรายละเอียดความคุ้มครอง (Leaflet), การตรวจสอบเงื่อนไขก่อนออกเอกสาร, และการสร้างไฟล์ PDF ของใบเสนอราคา
 ' #############################################################################################################
 
-Option Explicit
+Option Explicit ' บังคับให้ประกาศตัวแปรก่อนใช้งาน เพื่อป้องกันข้อผิดพลาดจากการพิมพ์ผิด
+Option Private Module ' ซ่อนโมดูลนี้จากการเรียกใช้ภายนอก (เช่น จาก Immediate Window) เพื่อความปลอดภัย
 
 ' ======================================================================================
 ' การประกาศตัวแปรระดับ Global (Global Constants)
@@ -26,12 +27,12 @@ Public Sub A_Clear_Input_YooDeeMeeSuk()
     
     On Error GoTo ClearErrorHandler
     
-    Set QTSheet = ThisWorkbook.Worksheets("QT_อยู่ดีมีสุข")'<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<
+    Set QTSheet = ThisWorkbook.Worksheets("QT_อยู่ดีมีสุข") '<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<
     
     ' ปิดระบบ Event ชั่วคราวป้องกันการขัดจังหวะขณะล้างข้อมูลหลายๆ เซลล์พร้อมกัน
     Application.EnableEvents = False
 
-    Call setSheetProtection(QTSheet, False) ' ปลดล็อก Sheet ชั่วคราวเพื่อให้สามารถแก้ไขเซลล์ได้
+    Call SetSheetProtection(QTSheet, False) ' ปลดล็อก Sheet ชั่วคราวเพื่อให้สามารถแก้ไขเซลล์ได้
     Call A_Hide_Address_Rows_YooDeeMeeSuk ' เปิดแถวที่อยู่ก่อนกรอกข้อมูล เพื่อความสวยงามของหน้าจอขณะทำงาน
 
    With QTSheet
@@ -43,10 +44,10 @@ Public Sub A_Clear_Input_YooDeeMeeSuk()
         ' 2. นำชื่อเซลล์ทั้งหมดมารวมกันไว้ใน Array เดียว (เรียงลำดับตามต้องการได้เลย)
         ' ใส่แค่เซลล์แรก ในกรณีเป็น Merged Cells
         cleanRanges = Array( _
-            "G24", "G26","H28","J28","L28", _
-            "G31", "G33", "H35","H36", "L35" ,"L36" , "L38","G41", "G42", "G43","G45", _
-            "G49","G57", "H51", "H53", "H59", "H61", "J51", "J53","J59","L51","L53","L59","F55", _
-            "G64","G66","G68","L64" _
+            "G24", "G26", "H28", "J28", "L28", _
+            "G31", "G33", "H35", "H36", "L35", "L36", "L38", "G41", "G42", "G43", "G45", _
+            "G49", "G57", "H51", "H53", "H59", "H61", "J51", "J53", "J59", "L51", "L53", "L59", "F55", _
+            "G64", "G66", "G68", "L64" _
         ) '<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<
         
         ' 3. ใช้ For Each เพื่อ Loop ดึงชื่อเซลล์ออกมา Set ค่าเป็นว่างทีละช่อง
@@ -105,7 +106,7 @@ Sub A_Close_Leaflet_YooDeeMeeSuk()
 
     leafletSheet.Visible = False ' ซ่อนแผ่นงาน Leaflet อีกครั้ง
 
-    QTSheet.Activate ' 
+    QTSheet.Activate '
     
     Call SetWorkbookProtection(WorkbookLockSetting) 'ล็อกโครงสร้างไฟล์คืน
 End Sub
@@ -190,7 +191,7 @@ Public Sub A_Get_Quotation_YooDeeMeeSuk()
     End If
 
     ' 2. ตรวจสอบเงื่อนไขความถูกต้องของทุนประกัน (แยกออกมาเป็นอีก If หนึ่ง ไม่ซ้อนกัน)
-    If Not IsPremiumValid(PremVal, PremRange) Then 
+    If Not IsPremiumValid(PremVal, PremRange) Then
         Exit Sub ' ถ้าฟังก์ชันคืนค่า False (ทุนไม่ตรงแผน) จะหยุดทำงานทันทีพร้อมแจ้งเตือนจากในฟังก์ชันเอง
     End If
     
@@ -203,15 +204,15 @@ Public Sub A_Get_Quotation_YooDeeMeeSuk()
     On Error GoTo ErrorHandler
  
     ' 1. กำหนดชื่อและที่เก็บไฟล์
-    fileName = "ใบเสนอราคา_อยู่ดีมีสุข_" & Format(Now, "yyyy-mm-dd_hhmm") & QTNumber & ".pdf" 
+    fileName = "ใบเสนอราคา_อยู่ดีมีสุข_" & Format(Now, "yyyy-mm-dd_hhmm") & QTNumber & ".pdf"
     filePath = ThisWorkbook.Path & "\" & fileName
     
     ' ==========================================================================================
     ' 2. คำสั่งตรวจสอบเวอร์ชันก่อนดำเนินการ Export เป็น PDF
     ' ==========================================================================================
-    If Val(Application.Version) < 12 Then
+    If val(Application.Version) < 12 Then
         ' -------------------------------------------------------------------------
-        ' ❌ กรณีเป็น Excel 2003 (เวอร์ชัน 11 ลงไป) : ไม่มีคำสั่งสร้าง PDF ในตัว
+        ' ? กรณีเป็น Excel 2003 (เวอร์ชัน 11 ลงไป) : ไม่มีคำสั่งสร้าง PDF ในตัว
         ' -------------------------------------------------------------------------
         
         Call FreezExcelScreen(False) ' ปลดล็อกหน้าจอชั่วคราวเพื่อให้ระบบเปิด Print Preview ได้
@@ -224,9 +225,9 @@ Public Sub A_Get_Quotation_YooDeeMeeSuk()
         
     Else
         ' -------------------------------------------------------------------------
-        ' ✅ กรณีเป็น Excel 2007 ขึ้นไป (เวอร์ชัน 12+)
+        ' ? กรณีเป็น Excel 2007 ขึ้นไป (เวอร์ชัน 12+)
         ' -------------------------------------------------------------------------
-        On Error Resume Next ' 🌟 ดักจับเผื่อเป็น 2007 รุ่นเก่าที่ไม่มีระบบ PDF
+        On Error Resume Next ' ?? ดักจับเผื่อเป็น 2007 รุ่นเก่าที่ไม่มีระบบ PDF
         
         QTRSheet.ExportAsFixedFormat _
             Type:=xlTypePDF, _
@@ -240,7 +241,7 @@ Public Sub A_Get_Quotation_YooDeeMeeSuk()
         
         ' ตรวจสอบว่าคำสั่งเซฟ PDF ทำงานสำเร็จหรือไม่?
         If Err.Number <> 0 Then
-            ' ❌ ถ้าเกิด Error แปลว่าเป็น 2007 รุ่นเก่า (ไม่มี SP2) หรือสิทธิ์ในเครื่องโดนบล็อก
+            ' ? ถ้าเกิด Error แปลว่าเป็น 2007 รุ่นเก่า (ไม่มี SP2) หรือสิทธิ์ในเครื่องโดนบล็อก
             Err.Clear
             Call FreezExcelScreen(False) ' คลายล็อกหน้าจอ
             
@@ -250,8 +251,8 @@ Public Sub A_Get_Quotation_YooDeeMeeSuk()
                    
             QTRSheet.PrintPreview ' ส่งไปหน้าตัวอย่างก่อนพิมพ์แทน
         Else
-            ' ✅ ถ้าไม่มี Error แปลว่าเซฟ PDF สำเร็จแล้ว เปิดไฟล์ให้ดูเรียบร้อย
-            ' ไม่มีอะไรต้องทำเพิ่ม เพราะคำสั่ง ExportAsFixedFormat มีคำสั่ง OpenAfterPublish:=True อยู่แล้ว 
+            ' ? ถ้าไม่มี Error แปลว่าเซฟ PDF สำเร็จแล้ว เปิดไฟล์ให้ดูเรียบร้อย
+            ' ไม่มีอะไรต้องทำเพิ่ม เพราะคำสั่ง ExportAsFixedFormat มีคำสั่ง OpenAfterPublish:=True อยู่แล้ว
             MsgBox "บันทึกไฟล์ PDF เรียบร้อยแล้วที่: " & vbCrLf & filePath, vbInformation, "สำเร็จ" ' แจ้งเตือนเมื่อสำเร็จ
         End If
         On Error GoTo ErrorHandler ' คืนค่าตัวดักจับข้อผิดพลาดหลักของระบบ
@@ -281,7 +282,7 @@ Sub A_Hide_Address_Rows_YooDeeMeeSuk()
     Call FreezExcelScreen(True) ' ปิดการอัปเดตหน้าจอชั่วคราวเพื่อป้องกันการกระพริบของหน้าจอขณะซ่อนแถว
     Call SetSheetProtection(ActiveSheet, False) ' ปลดล็อก Sheet ชั่วคราว
     
-    If Checkbox.Value = True  Then
+    If Checkbox.Value = True Then
         HiddingRows.Hidden = True
     Else
         HiddingRows.Hidden = False
@@ -306,7 +307,7 @@ Public Sub CheckAndSuggestPremium(ByVal totalVal As Double)
     Dim valResult As Variant
     Dim lastRow As Long, ColPremium As Long
     
-    Set QTSheet = ThisWorkbook.Worksheets("QT_อยู่ดีมีสุข")'<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<
+    Set QTSheet = ThisWorkbook.Worksheets("QT_อยู่ดีมีสุข") '<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<
     Set CFSheet = ThisWorkbook.Worksheets("CF_อยู่ดีมีสุข") '<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<
     Set NoticeCell = QTSheet.Range("J43") ' เซลล์สำหรับแสดงข้อความคำแนะนำใต้ช่องทุนประกันภัย (ปรับตามจริงได้)<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<
     ColPremium = 1 ' สมมติว่าตารางทุนประกันภัยอยู่ในคอลัมน์ A (ปรับตามจริงได้)'<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<
@@ -517,7 +518,7 @@ End Sub
 ' ==========================================================================================
 Public Function IsQuotationFormComplete(ByVal TargetSheet As Worksheet) As Boolean
     
-    ' 📍 [ส่วนแก้ไขพิกัด] ย้ายหน้าจอใหม่ หรือช่องบังคับกรอกเปลี่ยนไป ให้มาแก้ไขกลุ่มเซลล์ตรงนี้ที่เดียว!
+    ' ?? [ส่วนแก้ไขพิกัด] ย้ายหน้าจอใหม่ หรือช่องบังคับกรอกเปลี่ยนไป ให้มาแก้ไขกลุ่มเซลล์ตรงนี้ที่เดียว!
     ' อ้างอิงจากเครื่องหมายดอกจันสีแดง (*) บนหน้าจอ "เมืองไทยอยู่ดีมีสุข"
     
     Dim RequiredFields As Range
@@ -567,7 +568,7 @@ Public Function IsQuotationFormComplete(ByVal TargetSheet As Worksheet) As Boole
             MsgBox "โปรดระบุข้อมูลในช่องที่จำเป็นให้ครบถ้วนก่อนดำเนินการต่อค่ะ", vbCritical, "ข้อมูลไม่ครบถ้วน"
             
             ' ปลดล็อกชีทชั่วคราว (ถ้ามีการล็อกไว้) เพื่อส่ง Cursor ไปโฟกัสช่องที่ลืมกรอก
-            Application.Goto Cell
+            Application.GoTo Cell
             
             IsQuotationFormComplete = False
             Exit Function
@@ -577,3 +578,4 @@ Public Function IsQuotationFormComplete(ByVal TargetSheet As Worksheet) As Boole
     ' ถ้าผ่านทุกเงื่อนไข แปลว่ากรอกครบถ้วนเรียบร้อย
     IsQuotationFormComplete = True
 End Function
+

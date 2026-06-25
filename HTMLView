@@ -1,0 +1,58 @@
+<style>
+  table {
+    border-collapse: collapse;
+    width: 100%;
+    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+    font-size: 14px;
+    margin-top: 10px;
+    margin-bottom: 15px;
+  }
+  th {
+    background-color: #1f4e78;
+    color: white;
+    font-weight: bold;
+    padding: 10px;
+    text-align: left;
+    border: 1px solid #d9d9d9;
+  }
+  td {
+    padding: 10px;
+    border: 1px solid #d9d9d9;
+    color: #333333;
+  }
+  tr:nth-child(even) {
+    background-color: #f9fbfd;
+  }
+</style>
+
+<div style="font-family: 'Segoe UI', Tahoma, sans-serif; font-size: 15px; line-height: 1.6; color: #333333;">
+  
+  <p>เรียน ท่านผู้บริหาร,</p>
+  
+  <p>
+    เนื่องด้วยมีคำขอดำเนิน <strong>โครงการ IT (IT Project)</strong> จำนวน 
+    <strong style="font-size: 20px; color: #1f4e78; margin: 0 4px;">@{outputs('จำนวนคำขอที่ค้าง')}</strong> 
+    <strong>รายการ</strong> รอการอนุมัติจากท่าน
+  </p>
+
+  <div style="margin: 15px 0;">
+    @{body('Create_HTML_table')}
+  </div>
+
+  <p>
+    ขอความอนุเคราะห์ให้ท่านพิจารณาที่นี่ครับ 
+    <a href="https://make.powerautomate.com/environments/b3d207fc-7197-e8d5-995e-99e02c849e96/approvals/received" style="color: #0078d4; font-weight: bold; text-decoration: underline;">
+      =&gt;&gt; Pending Approval List
+    </a>
+    <br>
+    <span style="font-size: 13px; color: #666666;">(โดยจะมองเห็นเฉพาะรายการที่รออนุมัติที่ค้างอยู่สำหรับท่านเท่านั้น)</span>
+  </p>
+
+  
+  <p style="font-size: 13px; color: #888888; line-height: 1.5;">
+    ข้อมูล ณ @{body('Current_time')} <br><br>
+    ขอบคุณครับ<br>
+    <strong>แสงชัย IT PMO</strong>
+  </p>
+
+</div>

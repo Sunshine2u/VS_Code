@@ -1,27 +1,56 @@
-Sub SplitThaiAddressStrictStructure()
+Sub SplitThaiAddressWithProgress()
     Dim ws As Worksheet
     Set ws = ActiveSheet
     
     Dim lastRow As Long
-    lastRow = ws.Cells(ws.Rows.Count, "A").End(xlUp).Row
+    lastRow = ws.Cells(ws.Rows.Count, "B").End(xlUp).Row
     
-    ' สร้าง Header ผลลัพธ์ตามโครงสร้างที่ต้องการ
-    ws.Range("B1:L1").Value = Array("รหัสไปรษณีย์", "จังหวัด", "อำเภอ/เขต", "ตำบล/แขวง", "ถนน", "ซอย", "หมู่บ้าน/อาคาร/ตึก/คอนโด", "หมู่", "บ้านเลขที่", "เลขที่โฉนด", "ข้อความที่เหลือ")
+    ' หากไม่มีข้อมูลให้หยุดทำงาน
+    If lastRow < 2 Then Exit Sub
+    
+    ' 1. ตั้งค่าเริ่มต้นให้ UserForm และเปิด Form ขึ้นมาแสดงผล
+    With frmProgress
+        .lblBar.Width = 0 ' เริ่มต้นแถบสีที่ความกว้าง 0
+        .lblPct.Caption = "0%" ' เริ่มต้นตัวเลขที่ 0%
+        .Show vbModeless ' vbModeless สำคัญมาก! เพื่อให้โค้ดทำงานเบื้องหลังได้โดยฟอร์มไม่ค้าง
+    End With
+    
+    ' สร้าง Header ผลลัพธ์
+    ws.Range("C1:M1").Value = Array("รหัสไปรษณีย์", "จังหวัด", "อำเภอ/เขต", "ตำบล/แขวง", "ถนน", "ซอย", "หมู่บ้าน/อาคาร/ตึก/คอนโด", "หมู่", "บ้านเลขที่", "เลขที่โฉนด", "ข้อความที่เหลือ")
     
     Dim i As Long
     Dim tempAddr As String
     Dim regEx As Object, matches As Object
     Dim startPos As Long, endPos As Long
     
+    ' ตัวแปรสำหรับคำนวณสถานะ %
+    Dim totalRows As Long
+    Dim currentPct As Double
+    Dim maxBarWidth As Single
+    
+    totalRows = lastRow - 1 ' จำนวนแถวข้อมูลทั้งหมดที่จะวิ่งลูป (ไม่นับ Header)
+    maxBarWidth = frmProgress.FrameProgress.Width ' ความกว้างสูงสุดของแถบสีเท่ากับกรอบตัวนอก
+    
     Set regEx = CreateObject("VBScript.RegExp")
     regEx.Global = False
     regEx.IgnoreCase = True
     
     For i = 2 To lastRow
-        tempAddr = Trim(ws.Cells(i, 1).Value)
+        tempAddr = Trim(ws.Cells(i, 2).Value)
         
         ' ----------------------------------------------------
-        ' 1. ล้าง โดยใช้ฟังก์ชัน String ป้องกัน Error 5017
+        ' อัปเดตสถานะ Progress Bar ในทุกๆ แถวที่วิ่งผ่าน
+        ' ----------------------------------------------------
+        currentPct = (i - 1) / totalRows
+        
+        frmProgress.lblPct.Caption = Format(currentPct, "0%")
+        frmProgress.lblBar.Width = currentPct * maxBarWidth
+        
+        ' บังคับให้ระบบปฏิบัติการจัดการวาดภาพหน้าจอใหม่ทันที ไม่เช่นนั้นหน้าจอจะค้าง
+        DoEvents 
+        ' ----------------------------------------------------
+        
+        ' 1. ล้างวงเล็บ [ ]
         Do While InStr(tempAddr, "[") > 0 And InStr(tempAddr, "]") > 0
             startPos = InStr(tempAddr, "[")
             endPos = InStr(tempAddr, "]")
@@ -32,17 +61,16 @@ Sub SplitThaiAddressStrictStructure()
             End If
         Loop
         tempAddr = Trim(tempAddr)
-        ' ----------------------------------------------------
         
-        ' 2. แยกดึงรหัสไปรษณีย์ (ตัวเลข 5 หลัก)
+        ' 2. รหัสไปรษณีย์ (ปรับปรุง: บังคับให้อยู่ท้ายประโยคเท่านั้นด้วย \s*$)
         Dim zip As String: zip = ""
-        regEx.Pattern = "\b\d{5}\b"
+        regEx.Pattern = "\b\d{5}\s*$"
         If regEx.Test(tempAddr) Then
-            zip = regEx.Execute(tempAddr)(0).Value
+            zip = Trim(regEx.Execute(tempAddr)(0).Value)
             tempAddr = Trim(regEx.Replace(tempAddr, ""))
         End If
         
-        ' 3. แยกดึงจังหวัด (กรุงเทพ, กทม., กรุงเทพฯ, กรุงเทพมหานคร และ จ.ต่างๆ)
+        ' 3. จังหวัด
         Dim province As String: province = ""
         regEx.Pattern = "(จังหวัด|จ\.)\s*([^\s]+)|(กรุงเทพมหานคร|กรุงเทพฯ|กรุงเทพ|กทม\.)"
         If regEx.Test(tempAddr) Then
@@ -61,16 +89,15 @@ Sub SplitThaiAddressStrictStructure()
             tempAddr = Trim(regEx.Replace(tempAddr, ""))
         End If
         
-        ' 4. [ปรับปรุงใหม่] แยกดึงอำเภอ / เขต (บังคับเงื่อนไขให้อยู่ติดกับ แขวง/ตำบล หรือกลุ่มคำจังหวัดเดิม)
-        ' โดยจะเช็คว่าต้องมีคำว่า แขวง/ตำบล อยู่ข้างหน้า หรือเป็นคำที่อยู่ติดกับปลายประโยคใกล้รหัสไปรษณีย์/จังหวัด
+        ' 4. อำเภอ / เขต (Strict District Matching)
         Dim amphur As String: amphur = ""
-        regEx.Pattern = "(อำเภอ|อ\.|เขต)\s*([^\s]+)(?=\s*(กรุงเทพมหานคร|จังหวัด|$))"
+        regEx.Pattern = "(อำเภอ|อ\.|เขต)\s*([^\s]+)"
         If regEx.Test(tempAddr) Then
             amphur = regEx.Execute(tempAddr)(0).Value
             tempAddr = Trim(regEx.Replace(tempAddr, ""))
         End If
         
-        ' 5. แยกดึงตำบล / แขวง / ตรอก
+        ' 5. ตำบล / แขวง / ตรอก
         Dim tumbon As String: tumbon = ""
         regEx.Pattern = "(ตำบล|ต\.|แขวง|ตรอก)\s*([^\s]+)"
         If regEx.Test(tempAddr) Then
@@ -78,7 +105,7 @@ Sub SplitThaiAddressStrictStructure()
             tempAddr = Trim(regEx.Replace(tempAddr, ""))
         End If
         
-        ' 6. แยกดึงเลขที่โฉนด (โฉนด, ฉ., ฉ นำหน้าตัวเลข)
+        ' 6. เลขที่โฉนด
         Dim titleDeed As String: titleDeed = ""
         regEx.Pattern = "(โฉนด|ฉ\.|ฉ)\s*(\d+)"
         If regEx.Test(tempAddr) Then
@@ -86,7 +113,7 @@ Sub SplitThaiAddressStrictStructure()
             tempAddr = Trim(regEx.Replace(tempAddr, ""))
         End If
         
-        ' 7. แยกดึงซอย (รูดเก็บยาวไปจนชน ถนน, ตำบล, แขวง, เขต, อำเภอ)
+        ' 7. ซอย (Lookahead รูดชนฟิลด์ถัดไป)
         Dim soi As String: soi = ""
         regEx.Pattern = "(ซอย|ซ\.)\s*(.*?)(?=(ถนน|ถ\.|ถ\.ถ\.|ตำบล|ต\.|แขวง|อำเภอ|อ\.|เขต|$))"
         If regEx.Test(tempAddr) Then
@@ -98,7 +125,7 @@ Sub SplitThaiAddressStrictStructure()
             End If
         End If
         
-        ' 8. แยกดึงถนน (รูดเก็บยาวไปจนชน ตำบล, แขวง, เขต, อำเภอ)
+        ' 8. ถนน (Lookahead รูดชนฟิลด์ถัดไป)
         Dim road As String: road = ""
         regEx.Pattern = "(ถนน|ถ\.|ถ\.ถ\.)\s*(.*?)(?=(ตำบล|ต\.|แขวง|อำเภอ|อ\.|เขต|$))"
         If regEx.Test(tempAddr) Then
@@ -110,7 +137,7 @@ Sub SplitThaiAddressStrictStructure()
             End If
         End If
         
-        ' 9. แยกดึง หมู่บ้าน / อาคาร / ตึก / คอนโด 
+        ' 9. หมู่บ้าน / อาคาร / ตึก / คอนโด
         Dim propertyGroup As String: propertyGroup = ""
         regEx.Pattern = "(หมู่บ้าน|มบ\.)\s*([^\s]+(\s+[^\s]+)?)|(อาคาร|ตึก|คอนโด)\s*([^\s]+(\s+[^\s]+)?)"
         If regEx.Test(tempAddr) Then
@@ -118,7 +145,7 @@ Sub SplitThaiAddressStrictStructure()
             tempAddr = Trim(regEx.Replace(tempAddr, ""))
         End If
         
-        ' 10. แยกดึง "หมู่" ออกมาต่างหาก (หมู่ 3, ม.5, หมู่ที่ 12)
+        ' 10. หมู่
         Dim moo As String: moo = ""
         regEx.Pattern = "(หมู่ที่|หมู่|ม\.)\s*\d+"
         If regEx.Test(tempAddr) Then
@@ -126,7 +153,7 @@ Sub SplitThaiAddressStrictStructure()
             tempAddr = Trim(regEx.Replace(tempAddr, ""))
         End If
         
-        ' 11. แยกดึงบ้านเลขที่ (ส่วนที่อยู่ด้านหน้าสุด)
+        ' 11. บ้านเลขที่
         Dim houseNo As String: houseNo = ""
         regEx.Pattern = "^(เลขที่\s*)?(\d+[\/\d\-\.\(\)\s,]+)"
         If regEx.Test(tempAddr) Then
@@ -135,20 +162,23 @@ Sub SplitThaiAddressStrictStructure()
             houseNo = Trim(Replace(houseNo, "เลขที่", ""))
         End If
         
-        ' บันทึกข้อมูลพิมพ์ลงใน Worksheet (คอลัมน์ B - L)
-        ws.Cells(i, 2).Value = zip
-        ws.Cells(i, 3).Value = province
-        ws.Cells(i, 4).Value = amphur
-        ws.Cells(i, 5).Value = tumbon
-        ws.Cells(i, 6).Value = road           
-        ws.Cells(i, 7).Value = soi            
-        ws.Cells(i, 8).Value = propertyGroup  
-        ws.Cells(i, 9).Value = moo            
-        ws.Cells(i, 10).Value = houseNo       
-        ws.Cells(i, 11).Value = titleDeed     
-        ws.Cells(i, 12).Value = Trim(tempAddr) 
+        ' ส่งข้อมูลลงตาราง
+        ws.Cells(i, 3).Value = zip
+        ws.Cells(i, 4).Value = province
+        ws.Cells(i, 5).Value = amphur
+        ws.Cells(i, 6).Value = tumbon
+        ws.Cells(i, 7).Value = road           
+        ws.Cells(i, 8).Value = soi            
+        ws.Cells(i, 9).Value = propertyGroup  
+        ws.Cells(i, 10).Value = moo            
+        ws.Cells(i, 11).Value = houseNo       
+        ws.Cells(i, 12).Value = titleDeed     
+        ws.Cells(i, 13).Value = Trim(tempAddr) 
     Next i
     
-    ws.Columns("B:L").AutoFit
-    MsgBox "ปรับปรุงโครงสร้างตรวจสอบ เขต/อำเภอ เรียบร้อยแล้วครับ!", vbInformation
+    ' 2. เมื่อทำงานเสร็จสมบูรณ์ ให้ปิด UserForm ลงอัตโนมัติ
+    Unload frmProgress
+    
+    ws.Columns("C:M").AutoFit
+    MsgBox "แยกข้อมูลที่อยู่และอัปเดตระบบเสร็จสมบูรณ์แล้วครับ!", vbInformation
 End Sub

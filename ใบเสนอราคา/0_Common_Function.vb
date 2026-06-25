@@ -1,9 +1,12 @@
+Option Explicit ' บังคับให้ประกาศตัวแปรก่อนใช้งาน เพื่อป้องกันข้อผิดพลาดจากการพิมพ์ผิด
+Option Private Module ' ซ่อนโมดูลนี้จากการเรียกใช้ภายนอก (เช่น จาก Immediate Window) เพื่อความปลอดภัย
+
 ' =======================================================================================
 ' Function สำหรับประมวลผลและกรองข้อมูลออกมาเป็น Array (Logic)
 ' เหมาะสำหรับการดึงข้อมูลจากฐานข้อมูลและนำไปใช้ต่อใน Sub ต่างๆ เช่น การอัปเดตรายชื่อจังหวัด/อำเภอ/ตำบล
 ' รับค่า: โหมดการกรอง (เช่น "Amphoe" หรือ "Tambon"), ชื่อจังหวัด, และชื่ออำเภอ (ถ้ามี)
 ' คืนค่า: Array 2 มิติ ที่มีข้อมูลที่ผ่านการกรองแล้ว (เช่น รายชื่ออำเภอที่อยู่ในจังหวัดที่เลือก)
-' =======================================================================================   
+' =======================================================================================
 Public Function GetFilteredLocationArray(ByVal Mode As String, ByVal Prov As String, Optional ByVal Amp As String = "") As Variant
     Dim CommonSheet As Worksheet
     Dim TargetRange As Range
@@ -13,13 +16,13 @@ Public Function GetFilteredLocationArray(ByVal Mode As String, ByVal Prov As Str
     
     Set CommonSheet = ThisWorkbook.Worksheets("CF_Common") '<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<
     ' หาแถวสุดท้ายที่มีข้อมูลโดยดูจากคอลัมน์ G (ตำบล) เป็นหลัก
-    LastRow = CommonSheet.Cells(CommonSheet.Rows.Count, "G").End(xlUp).Row '<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<
+    lastRow = CommonSheet.Cells(CommonSheet.Rows.count, "G").End(xlUp).Row '<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<
     
     ' ตรวจสอบเซฟโซน: หากไม่มีข้อมูลเลยให้ล็อกค่าขั้นต่ำไว้ที่แถว 2 ป้องกัน Error
-    If LastRow < 2 Then LastRow = 2
+    If lastRow < 2 Then lastRow = 2
     
     ' กำหนด Range ข้อมูลตั้งแต่ G2 ไปจนถึงคอลัมน์ I แถวสุดท้าย
-    Set TargetRange = CommonSheet.Range("G2:I" & LastRow) 'แก้ไข column<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<
+    Set TargetRange = CommonSheet.Range("G2:I" & lastRow) 'แก้ไข column<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<
 
     ' 1. ดึงข้อมูลเข้า Array (G=จังหวัด, H=อำเภอ, I=ตำบล)
     rawData = TargetRange.Value ' ดึงข้อมูลเป็น Array 2 มิติ (1 to N, 1 to 3)
@@ -240,25 +243,25 @@ End Function
 ' targetSheet: ส่ง Object ของ Worksheet ที่ต้องการจัดการเข้ามา
 ' IsLock: True = ล็อกข้อมูล, False = ปลดล็อกข้อมูล
 ' ======================================================================================
-Public Sub SetSheetProtection(ByVal targetSheet As Worksheet, ByVal IsLock As Boolean)
+Public Sub SetSheetProtection(ByVal TargetSheet As Worksheet, ByVal IsLock As Boolean)
     
     ' ตรวจสอบเบื้องต้นว่ามีการส่ง Sheet เข้ามาจริงหรือไม่ (ป้องกัน Error)
-    If targetSheet Is Nothing Then Exit Sub
+    If TargetSheet Is Nothing Then Exit Sub
 
     If IsLock Then
         ' ---- กรณีสั่งให้ "ล็อก" (Protect) ----
         ' คุณสามารถตั้งค่า Property การล็อกเพิ่มเติมได้ที่นี่
-        targetSheet.Protect Password:=myPassword, _
+        TargetSheet.Protect Password:=myPassword, _
                             DrawingObjects:=True, _
                             Contents:=True, _
                             Scenarios:=True, _
                             UserInterfaceOnly:=True ' ล็อกเฉพาะส่วนที่เป็นเนื้อหาและวัตถุ แต่ยังให้ Macro ทำงานได้
-        targetSheet.EnableSelection = xlUnlockedCells ' อนุญาตให้เลือกเฉพาะเซลล์ที่ไม่ได้ล็อก
+        TargetSheet.EnableSelection = xlUnlockedCells ' อนุญาตให้เลือกเฉพาะเซลล์ที่ไม่ได้ล็อก
         ThisWorkbook.Protect Password:=myPassword, Structure:=True, Windows:=False
     Else
         ' ---- กรณีสั่งให้ "ปลดล็อก" (Unprotect) ----
-        targetSheet.Unprotect Password:=myPassword
-        targetSheet.EnableSelection = xlNoRestrictions
+        TargetSheet.Unprotect Password:=myPassword
+        TargetSheet.EnableSelection = xlNoRestrictions
         ThisWorkbook.Unprotect Password:=myPassword
     End If
     
@@ -267,7 +270,7 @@ End Sub
 
 ' ======================================================================================
 ' SetWorkbookProtection: ฟังก์ชันสำหรับจัดการการล็อก/ปลดล็อกทั้ง Workbook
-' ส่งค่า IsLock: True = ล็อก Workbook, False = ปลดล็อก Workbook  
+' ส่งค่า IsLock: True = ล็อก Workbook, False = ปลดล็อก Workbook
 ' เหมาะสำหรับสถานการณ์ที่คุณต้องการล็อกโครงสร้างของ Workbook เพื่อป้องกันการเพิ่ม/ลบ/ย้ายแผ่นงาน
 ' ======================================================================================
 Public Sub SetWorkbookProtection(ByVal IsLock As Boolean)
@@ -287,7 +290,7 @@ End Sub
 ' UnlockAllSheets: ฟังก์ชันสำหรับปลดล็อกทุกแผ่นงานใน Workbook (ใช้ในกรณีฉุกเฉิน)
 ' เหมาะสำหรับสถานการณ์ที่คุณลืมรหัสผ่านหรือมีปัญหากับการล็อกแผ่นงาน
 ' =======================================================================================
-Public Sub A__UnlockAllSheets()
+Private Sub A__UnlockAllSheets()
     Dim ws As Worksheet
     For Each ws In ActiveWorkbook.Worksheets
         ws.Unprotect Password:=myPassword
@@ -299,7 +302,7 @@ End Sub
 ' ---------- Sub Routine สำหรับรีเซ็ตระบบด้วยตนเอง ----------
 ' เหมาะสำหรับสถานการณ์ที่ระบบ Event หรือ Calculation มีปัญหา เช่น ค้าง, ไม่ตอบสนอง, หรือเกิดข้อผิดพลาดที่ทำให้ Excel อยู่ในสถานะไม่ปกติ
 ' =======================================================================================
-Public Sub ResetExcelEvents()
+Private Sub ResetExcelEvents()
     ' เปิดการทำงานของ Event (เช่น การตรวจจับการแก้ไขเซลล์)
     Application.EnableEvents = True
     ' ตั้งค่าการคำนวณสูตรให้เป็นแบบอัตโนมัติ (Automatic Calculation)
@@ -322,3 +325,4 @@ Public Sub FreezExcelScreen(ByVal IsFreeze As Boolean)
         Application.ScreenUpdating = True    ' เปิดหน้าจอให้แสดงผลปกติ
     End If
 End Sub
+
